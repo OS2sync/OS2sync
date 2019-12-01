@@ -1,0 +1,57 @@
+﻿@page
+@model TreeModel
+@{
+    var treeJson = GuiUtil.GetOrgUnitTree();
+}
+
+    <div>
+        <h2>Enheder i STS Organisation</h2>
+
+        <input class="form-control" id="searchField" style="margin-bottom: 40px;" autofocus="autofocus" />
+        <div id="hierarchy"></div>
+    </div>
+
+@section scripts {
+    <script type="text/javascript">
+        var allOUs = @Html.Raw(treeJson);
+
+        $("document").ready(function() {
+			$("#hierarchy").jstree({
+				"core": {
+					"data": allOUs,
+					"themes": {
+						"icons": false
+					}
+				},
+				"search" : {
+					"show_only_matches": true,
+					"search_callback": function(str, node) {
+						return (node.text.toUpperCase().startsWith(str.toUpperCase()));
+					}
+				},
+				"plugins" : [
+					"wholerow", "search"
+				]
+            });
+
+			    // selecting in the JSTree
+            $("#hierarchy").on("select_node.jstree", function (e, data) {
+                window.location = '/ViewOu?uuid=' + data.node.id;
+			});
+
+			// searching in the JSTree
+			var to = false;
+			$('#searchField').keyup(function() {
+				if (to) {
+					clearTimeout(to);
+				}
+
+				to = setTimeout(function() {
+					var v = $('#searchField').val();
+
+					$('#hierarchy').jstree(true).search(v);
+				}, 400);
+			});
+		});
+    </script>
+}

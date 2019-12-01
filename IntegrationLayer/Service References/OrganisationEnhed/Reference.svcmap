@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ReferenceGroup xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" ID="3612d70e-af9e-44eb-bf95-4a712dcd1fa9" xmlns="urn:schemas-microsoft-com:xml-wcfservicemap">
+  <ClientOptions>
+    <GenerateAsynchronousMethods>false</GenerateAsynchronousMethods>
+    <GenerateTaskBasedAsynchronousMethod>true</GenerateTaskBasedAsynchronousMethod>
+    <EnableDataBinding>true</EnableDataBinding>
+    <ExcludedTypes />
+    <ImportXmlTypes>false</ImportXmlTypes>
+    <GenerateInternalTypes>false</GenerateInternalTypes>
+    <GenerateMessageContracts>false</GenerateMessageContracts>
+    <NamespaceMappings />
+    <CollectionMappings />
+    <GenerateSerializableTypes>true</GenerateSerializableTypes>
+    <Serializer>Auto</Serializer>
+    <UseSerializerForFaults>true</UseSerializerForFaults>
+    <ReferenceAllAssemblies>true</ReferenceAllAssemblies>
+    <ReferencedAssemblies />
+    <ReferencedDataContractTypes />
+    <ServiceContractMappings />
+  </ClientOptions>
+  <MetadataSources>
+    <MetadataSource Address="Z:\projects\stsorgsync-dotnetcore\IntegrationLayer\Resources\v5\OrganisationEnhed\wsdl\context\OrganisationEnhedService.wsdl" Protocol="file" SourceId="1" />
+  </MetadataSources>
+  <Metadata>
+    <MetadataFile FileName="AuthorityContext_1.xsd" MetadataType="Schema" ID="2af5864c-7441-4f6d-99e7-608d7cb0b5ff" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/sp/AuthorityContext_1.xsd" />
+    <MetadataFile FileName="ServiceplatformFaultMessage.wsdl" MetadataType="Wsdl" ID="c6bad3ba-0559-4a6e-bc80-ed3ee9c3bfaf" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/sp/ServiceplatformFaultMessage_1.wsdl" />
+    <MetadataFile FileName="OrganisationEnhedOperationer.xsd" MetadataType="Schema" ID="7daa4786-f10c-46c9-9f52-e0f2d263b9e4" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/SF1500_EP_FS6/xsd/1.1.STS-3/OrganisationEnhedOperationer.xsd" />
+    <MetadataFile FileName="policies.wsdl" MetadataType="Wsdl" ID="9f476c29-3748-490e-a7b8-fc14b2a4c4cd" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/wsdl/context/policies.wsdl" />
+    <MetadataFile FileName="OrganisationEnhed.xsd" MetadataType="Schema" ID="86ba3a0e-e779-4a5c-a5ff-ab9a15b05a74" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/SF1500_EP_FS6/xsd/1.1.STS-3/OrganisationEnhed.xsd" />
+    <MetadataFile FileName="Part.xsd" MetadataType="Schema" ID="e0da79ea-5f81-4e86-a8e2-c8dc5fb3ba86" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/SF1500_EP_FS6/xsd/1.1.STS-3/Part.xsd" />
+    <MetadataFile FileName="OrganisationEnhedServiceMsg.xsd" MetadataType="Schema" ID="4516ac26-df03-46ae-8ccd-a41df6f49d5b" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/OrganisationEnhedServiceMsg.xsd" />
+    <MetadataFile FileName="SagDokObjekt.xsd" MetadataType="Schema" ID="1acc84fa-564f-447d-8ff9-0dfde7ddb75b" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/SF1500_EP_FS6/xsd/common/SagDokObjekt.xsd" />
+    <MetadataFile FileName="CallContext_1.xsd" MetadataType="Schema" ID="4f1f238d-519d-472a-94ef-452fc3da8879" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/sp/CallContext_1.xsd" />
+    <MetadataFile FileName="ServiceplatformFault_1.xsd" MetadataType="Schema" ID="497c3306-b560-4e68-afff-288a760d6073" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/sp/ServiceplatformFault_1.xsd" />
+    <MetadataFile FileName="RequestHeader.xsd" MetadataType="Schema" ID="5b1af2e6-06be-4055-b603-8b8b8acd2426" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/SF1500_EP_FS6/xsd/common/RequestHeader.xsd" />
+    <MetadataFile FileName="OrganisationEnhedService.wsdl" MetadataType="Wsdl" ID="5702d91e-dbe4-4ed7-8413-dd8e1d26f94d" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/wsdl/context/OrganisationEnhedService.wsdl" />
+    <MetadataFile FileName="OrganisationFaelles.xsd" MetadataType="Schema" ID="31c4e727-1c5b-48ed-aa1a-f653341bfd95" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/OrganisationEnhed/SF1500_EP_FS6/xsd/1.1.STS-3/OrganisationFaelles.xsd" />
+  </Metadata>
+  <Extensions>
+    <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />
+    <ExtensionFile FileName="configuration.svcinfo" Name="configuration.svcinfo" />
+  </Extensions>
+</ReferenceGroup>

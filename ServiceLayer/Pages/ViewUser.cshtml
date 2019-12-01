@@ -1,0 +1,60 @@
+﻿@page
+@model ViewUserModel
+@{
+    string uuid = HttpContext.Request.Query["uuid"];
+    var user = GuiUtil.GetUser(uuid);
+}
+
+    <div>
+        <table class="table table-striped">
+            <tr>
+                <td>Navn</td>
+                <td>@user.Person.Name</td>
+            </tr>
+
+            <tr>
+                <td>Uuid</td>
+                <td>@user.Uuid</td>
+            </tr>
+
+            <tr>
+                <td>Brugervendt Nøgle</td>
+                <td>@user.ShortKey</td>
+            </tr>
+
+            <tr>
+                <td>BrugerId</td>
+                <td>@user.UserId</td>
+            </tr>
+
+            <tr>
+                <td>Sidst opdateret</td>
+                <td>@user.Timestamp.Date.ToString("dd/MM/yyyy")</td>
+            </tr>
+
+            <tr>
+                <td>Adresseoplysninger</td>
+                <td>
+                    <ul>
+                        @foreach (var address in user.Addresses)
+                        {
+                            <li>@address.Value</li>
+                        }
+                    </ul>
+                </td>
+            </tr>
+
+            <tr>
+                <td>Link til enheder</td>
+                <td>
+                    <ul>
+                        @foreach (var position in user.Positions)
+                        {
+                            <li><a href="~/ViewOU?uuid=@position.OU?.Uuid">@position.Name (@position.OU?.Uuid)</a></li>
+                        }
+                    </ul>
+                </td>
+            </tr>
+        </table>
+
+    </div>

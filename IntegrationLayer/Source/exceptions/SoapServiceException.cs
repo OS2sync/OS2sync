@@ -1,0 +1,16 @@
+﻿using System;
+
+namespace Organisation.IntegrationLayer
+{
+    [Serializable]
+    public class SoapServiceException : System.Exception
+    {
+        public SoapServiceException() : base() { }
+        public SoapServiceException(string message) : base(message) { }
+        public SoapServiceException(string message, System.Exception inner) : base(message, inner) { }
+
+        // A constructor is needed for serialization when an
+        // exception propagates from a remoting server to the client. 
+        protected SoapServiceException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) :base(info,context) { }
+    }
+}

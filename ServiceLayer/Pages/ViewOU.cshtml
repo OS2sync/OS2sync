@@ -1,0 +1,94 @@
+﻿@page
+@model ViewOUModel
+@{
+    string uuid = HttpContext.Request.Query["uuid"];
+    var ou = GuiUtil.GetOrgUnit(uuid);
+}
+
+    <div>
+        <table class="table table-striped">
+            <tr>
+                <td>Navn</td>
+                <td>@ou.Name</td>
+            </tr>
+
+            <tr>
+                <td>Uuid</td>
+                <td>@ou.Uuid</td>
+            </tr>
+
+            <tr>
+                <td>Brugervendt Nøgle</td>
+                <td>@ou.ShortKey</td>
+            </tr>
+
+            <tr>
+                <td>Link til overliggende enhed</td>
+                <td><a href='~/ViewOU?uuid=@ou.ParentOU?.Uuid'>@GuiUtil.GetOUName(ou.ParentOU?.Uuid)</a></td>
+            </tr>
+
+            <tr>
+                <td>Type</td>
+                <td>@ou.Type</td>
+            </tr>
+
+            <tr>
+                <td>Sidst opdateret</td>
+                <td>@ou.Timestamp.Date.ToString("dd/MM/yyyy")</td>
+            </tr>
+
+            <tr>
+                <td>Link til leder</td>
+                <td><a href="~/ViewUser?uuid=@ou.Manager?.Uuid">@ou.Manager?.Uuid</a></td>
+            </tr>
+
+            <tr>
+                <td>Adresseoplysninger</td>
+                <td>
+                    <ul>
+                        @foreach (var address in ou.Addresses)
+                        {
+                            <li>@address.Value</li>
+                        }
+                    </ul>
+                </td>
+            </tr>
+
+            <tr>
+                <td>Opgaver registreret på enheden</td>
+                <td>
+                    <ul>
+                        @foreach (var task in ou.Tasks)
+                        {
+                            <li>@task</li>
+                        }
+                    </ul>
+                </td>
+            </tr>
+
+            <tr>
+                <td>Henvendelssted for disse opgaver</td>
+                <td>
+                    <ul>
+                        @foreach (var task in ou.ContactForTasks)
+                        {
+                            <li>@task</li>
+                        }
+                    </ul>
+                </td>
+            </tr>
+
+            <tr>
+                <td>Link til medarbejdere</td>
+                <td>
+                    <ul>
+                        @foreach (var position in ou.Positions)
+                        {
+                            <li><a href="~/ViewUser?uuid=@position.User?.Uuid">@GuiUtil.GetUserName(position.User?.Uuid) @position.Name</a></li>
+                        }
+                    </ul>
+                </td>
+            </tr>
+        </table>
+
+    </div>

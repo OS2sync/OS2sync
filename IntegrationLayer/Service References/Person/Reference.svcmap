@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ReferenceGroup xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" ID="10951156-6fb6-45bd-b6cf-99343e67ddc2" xmlns="urn:schemas-microsoft-com:xml-wcfservicemap">
+  <ClientOptions>
+    <GenerateAsynchronousMethods>false</GenerateAsynchronousMethods>
+    <GenerateTaskBasedAsynchronousMethod>true</GenerateTaskBasedAsynchronousMethod>
+    <EnableDataBinding>true</EnableDataBinding>
+    <ExcludedTypes />
+    <ImportXmlTypes>false</ImportXmlTypes>
+    <GenerateInternalTypes>false</GenerateInternalTypes>
+    <GenerateMessageContracts>false</GenerateMessageContracts>
+    <NamespaceMappings />
+    <CollectionMappings />
+    <GenerateSerializableTypes>true</GenerateSerializableTypes>
+    <Serializer>Auto</Serializer>
+    <UseSerializerForFaults>true</UseSerializerForFaults>
+    <ReferenceAllAssemblies>true</ReferenceAllAssemblies>
+    <ReferencedAssemblies />
+    <ReferencedDataContractTypes />
+    <ServiceContractMappings />
+  </ClientOptions>
+  <MetadataSources>
+    <MetadataSource Address="Z:\projects\stsorgsync-dotnetcore\IntegrationLayer\Resources\v5\Person\wsdl\context\PersonService.wsdl" Protocol="file" SourceId="1" />
+  </MetadataSources>
+  <Metadata>
+    <MetadataFile FileName="SagDokObjekt.xsd" MetadataType="Schema" ID="5f394f09-5a9d-4e19-8a5f-a06ed0be8a4f" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/SF1500_EP_FS10/xsd/common/SagDokObjekt.xsd" />
+    <MetadataFile FileName="AuthorityContext_1.xsd" MetadataType="Schema" ID="b151c2ea-43a7-40b9-930c-4697c75322f9" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/sp/AuthorityContext_1.xsd" />
+    <MetadataFile FileName="CallContext_1.xsd" MetadataType="Schema" ID="ef403c14-9dad-48ab-89f0-28288f2a9830" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/sp/CallContext_1.xsd" />
+    <MetadataFile FileName="PersonService.wsdl" MetadataType="Wsdl" ID="a83074f0-9f52-4d0c-81b0-7e0e68192a95" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/wsdl/context/PersonService.wsdl" />
+    <MetadataFile FileName="Part.xsd" MetadataType="Schema" ID="0e20e63a-03ae-4c80-b672-e138f52720df" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/SF1500_EP_FS10/xsd/1.1.STS-3/Part.xsd" />
+    <MetadataFile FileName="ServiceplatformFault_1.xsd" MetadataType="Schema" ID="2602d303-1d58-4039-bfda-684ee0570b2a" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/sp/ServiceplatformFault_1.xsd" />
+    <MetadataFile FileName="Person.xsd" MetadataType="Schema" ID="67f5dc77-e9d3-4e0d-962f-b6cd668bf347" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/SF1500_EP_FS10/xsd/1.1.STS-3/Person.xsd" />
+    <MetadataFile FileName="RequestHeader.xsd" MetadataType="Schema" ID="ee18ebc1-6964-4aaa-aac9-8f1bb657cb4a" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/SF1500_EP_FS10/xsd/common/RequestHeader.xsd" />
+    <MetadataFile FileName="ServiceplatformFaultMessage.wsdl" MetadataType="Wsdl" ID="2a0e1e5b-b292-4905-848b-984138f2f72e" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/sp/ServiceplatformFaultMessage_1.wsdl" />
+    <MetadataFile FileName="GenerelleDefinitioner.xsd" MetadataType="Schema" ID="24c3243b-520e-4f3b-9a73-0ed8f3698c19" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/SF1500_EP_FS10/xsd/1.1.STS-3/GenerelleDefinitioner.xsd" />
+    <MetadataFile FileName="policies.wsdl" MetadataType="Wsdl" ID="da1ecf40-2fe0-4fef-819b-f6f87519c128" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/wsdl/context/policies.wsdl" />
+    <MetadataFile FileName="PersonServiceMsg.xsd" MetadataType="Schema" ID="09c2f09f-d1fb-4e7d-baba-63d3b08acf0b" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/PersonServiceMsg.xsd" />
+    <MetadataFile FileName="PersonOperationer.xsd" MetadataType="Schema" ID="7f02fcab-cb1d-4c12-8b9f-305eb47b0c30" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Person/SF1500_EP_FS10/xsd/1.1.STS-3/PersonOperationer.xsd" />
+  </Metadata>
+  <Extensions>
+    <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />
+    <ExtensionFile FileName="configuration.svcinfo" Name="configuration.svcinfo" />
+  </Extensions>
+</ReferenceGroup>

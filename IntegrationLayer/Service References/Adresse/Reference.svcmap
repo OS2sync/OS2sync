@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ReferenceGroup xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" ID="2b6fcbd8-1187-42a6-97c4-77cc145d6f0b" xmlns="urn:schemas-microsoft-com:xml-wcfservicemap">
+  <ClientOptions>
+    <GenerateAsynchronousMethods>false</GenerateAsynchronousMethods>
+    <GenerateTaskBasedAsynchronousMethod>true</GenerateTaskBasedAsynchronousMethod>
+    <EnableDataBinding>true</EnableDataBinding>
+    <ExcludedTypes />
+    <ImportXmlTypes>false</ImportXmlTypes>
+    <GenerateInternalTypes>false</GenerateInternalTypes>
+    <GenerateMessageContracts>false</GenerateMessageContracts>
+    <NamespaceMappings />
+    <CollectionMappings />
+    <GenerateSerializableTypes>true</GenerateSerializableTypes>
+    <Serializer>Auto</Serializer>
+    <UseSerializerForFaults>true</UseSerializerForFaults>
+    <ReferenceAllAssemblies>true</ReferenceAllAssemblies>
+    <ReferencedAssemblies />
+    <ReferencedDataContractTypes />
+    <ServiceContractMappings />
+  </ClientOptions>
+  <MetadataSources>
+    <MetadataSource Address="Z:\projects\stsorgsync-dotnetcore\IntegrationLayer\Resources\v5\Adresse\wsdl\context\AdresseService.wsdl" Protocol="file" SourceId="1" />
+  </MetadataSources>
+  <Metadata>
+    <MetadataFile FileName="AdresseService.wsdl" MetadataType="Wsdl" ID="1d219478-e182-442a-851c-f0197ef5dcc6" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/wsdl/context/AdresseService.wsdl" />
+    <MetadataFile FileName="RequestHeader.xsd" MetadataType="Schema" ID="0f968b11-b171-41cf-9837-09fa3faabe73" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/SF1500_EP_FS1/xsd/common/RequestHeader.xsd" />
+    <MetadataFile FileName="ServiceplatformFaultMessage.wsdl" MetadataType="Wsdl" ID="ca953386-0c41-46cb-a9d5-9aaff359d487" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/sp/ServiceplatformFaultMessage_1.wsdl" />
+    <MetadataFile FileName="AdresseServiceMsg.xsd" MetadataType="Schema" ID="cd261213-01db-44a7-90f5-49b1d3594fe4" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/AdresseServiceMsg.xsd" />
+    <MetadataFile FileName="AdresseOperationer.xsd" MetadataType="Schema" ID="1b8f7b44-be9c-4462-b0b6-22e7d05cb17d" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/SF1500_EP_FS1/xsd/1.1.STS-3/AdresseOperationer.xsd" />
+    <MetadataFile FileName="GenerelleDefinitioner.xsd" MetadataType="Schema" ID="2e86d9ba-c9c4-4f39-9eb4-df74398ef2e3" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/SF1500_EP_FS1/xsd/1.1.STS-3/GenerelleDefinitioner.xsd" />
+    <MetadataFile FileName="AuthorityContext_1.xsd" MetadataType="Schema" ID="0386bc20-1076-48b3-b937-31d1fbf27eb0" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/sp/AuthorityContext_1.xsd" />
+    <MetadataFile FileName="Adresse.xsd" MetadataType="Schema" ID="28b933e1-8e7a-48bf-9cab-32ceb1288349" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/SF1500_EP_FS1/xsd/1.1.STS-3/Adresse.xsd" />
+    <MetadataFile FileName="CallContext_1.xsd" MetadataType="Schema" ID="55be6e8c-cf24-4e01-b320-313035b6380d" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/sp/CallContext_1.xsd" />
+    <MetadataFile FileName="SagDokObjekt.xsd" MetadataType="Schema" ID="5349fec5-e24d-4781-878d-4958f7b5c7de" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/SF1500_EP_FS1/xsd/common/SagDokObjekt.xsd" />
+    <MetadataFile FileName="policies.wsdl" MetadataType="Wsdl" ID="5d304e1f-ca33-4074-bb2d-1d82230e5d34" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/wsdl/context/policies.wsdl" />
+    <MetadataFile FileName="ServiceplatformFault_1.xsd" MetadataType="Schema" ID="0346c54a-5ec1-4946-b3d8-c281d05eaff0" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Adresse/sp/ServiceplatformFault_1.xsd" />
+  </Metadata>
+  <Extensions>
+    <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />
+    <ExtensionFile FileName="configuration.svcinfo" Name="configuration.svcinfo" />
+  </Extensions>
+</ReferenceGroup>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ReferenceGroup xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" ID="d1695839-f5d6-4ead-8c97-2a7bd43b6edc" xmlns="urn:schemas-microsoft-com:xml-wcfservicemap">
+  <ClientOptions>
+    <GenerateAsynchronousMethods>false</GenerateAsynchronousMethods>
+    <GenerateTaskBasedAsynchronousMethod>true</GenerateTaskBasedAsynchronousMethod>
+    <EnableDataBinding>true</EnableDataBinding>
+    <ExcludedTypes />
+    <ImportXmlTypes>false</ImportXmlTypes>
+    <GenerateInternalTypes>false</GenerateInternalTypes>
+    <GenerateMessageContracts>false</GenerateMessageContracts>
+    <NamespaceMappings />
+    <CollectionMappings />
+    <GenerateSerializableTypes>true</GenerateSerializableTypes>
+    <Serializer>Auto</Serializer>
+    <UseSerializerForFaults>true</UseSerializerForFaults>
+    <ReferenceAllAssemblies>true</ReferenceAllAssemblies>
+    <ReferencedAssemblies />
+    <ReferencedDataContractTypes />
+    <ServiceContractMappings />
+  </ClientOptions>
+  <MetadataSources>
+    <MetadataSource Address="Z:\projects\stsorgsync-dotnetcore\IntegrationLayer\Resources\v5\Bruger\wsdl\context\BrugerService.wsdl" Protocol="file" SourceId="1" />
+  </MetadataSources>
+  <Metadata>
+    <MetadataFile FileName="BrugerService.wsdl" MetadataType="Wsdl" ID="2c31ce9d-9f6e-4508-b463-62ebd8b89de8" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/wsdl/context/BrugerService.wsdl" />
+    <MetadataFile FileName="ServiceplatformFaultMessage.wsdl" MetadataType="Wsdl" ID="6bc7875e-4a35-4e40-8e3e-0792c488f949" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/sp/ServiceplatformFaultMessage_1.wsdl" />
+    <MetadataFile FileName="AuthorityContext_1.xsd" MetadataType="Schema" ID="3c8b1b1e-8b76-41ad-9d8d-8e1dc87e01a5" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/sp/AuthorityContext_1.xsd" />
+    <MetadataFile FileName="BrugerServiceMsg.xsd" MetadataType="Schema" ID="3f9b5673-f386-4893-940a-2f38593f88ef" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/BrugerServiceMsg.xsd" />
+    <MetadataFile FileName="CallContext_1.xsd" MetadataType="Schema" ID="b1ad753b-1736-4131-9a82-24dec2b345e5" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/sp/CallContext_1.xsd" />
+    <MetadataFile FileName="Part.xsd" MetadataType="Schema" ID="20850c7b-0134-40e7-9890-61aecdcd9f14" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/SF1500_EP_FS2/xsd/1.1.STS-3/Part.xsd" />
+    <MetadataFile FileName="ServiceplatformFault_1.xsd" MetadataType="Schema" ID="ab18b263-e17e-4669-b1cf-5d10a69788ff" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/sp/ServiceplatformFault_1.xsd" />
+    <MetadataFile FileName="policies.wsdl" MetadataType="Wsdl" ID="61c0c145-e3b6-45c5-8146-16f74f330a99" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/wsdl/context/policies.wsdl" />
+    <MetadataFile FileName="BrugerOperationer.xsd" MetadataType="Schema" ID="94f54b9a-219b-44a7-8a8a-6b8dc176b184" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/SF1500_EP_FS2/xsd/1.1.STS-3/BrugerOperationer.xsd" />
+    <MetadataFile FileName="SagDokObjekt.xsd" MetadataType="Schema" ID="9b90f126-fc0b-4db8-883c-4ce0685a5fed" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/SF1500_EP_FS2/xsd/common/SagDokObjekt.xsd" />
+    <MetadataFile FileName="Bruger.xsd" MetadataType="Schema" ID="a00a29a3-2d8b-440c-9bb2-ec09fffcfbc2" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/SF1500_EP_FS2/xsd/1.1.STS-3/Bruger.xsd" />
+    <MetadataFile FileName="RequestHeader.xsd" MetadataType="Schema" ID="31aefec8-9330-451b-95c6-792716a907e9" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/SF1500_EP_FS2/xsd/common/RequestHeader.xsd" />
+    <MetadataFile FileName="OrganisationFaelles.xsd" MetadataType="Schema" ID="af8b9d9b-74b7-4a66-9c8c-4672089afa8f" SourceId="1" SourceUrl="file:///Z:/projects/stsorgsync-dotnetcore/IntegrationLayer/Resources/v5/Bruger/SF1500_EP_FS2/xsd/1.1.STS-3/OrganisationFaelles.xsd" />
+  </Metadata>
+  <Extensions>
+    <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />
+    <ExtensionFile FileName="configuration.svcinfo" Name="configuration.svcinfo" />
+  </Extensions>
+</ReferenceGroup>
