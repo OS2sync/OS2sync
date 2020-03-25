@@ -2,7 +2,7 @@
 
 namespace Organisation.ServiceLayer
 {
-    [Route("/")]
+    [Route("/manage/health")]
     public class HealthController : Controller
     {
         public IActionResult Health()

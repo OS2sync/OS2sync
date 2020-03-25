@@ -146,9 +146,9 @@ namespace Organisation.SchedulingLayer
 
                 return 0;
             }
-            catch (TemporaryFailureException)
+            catch (TemporaryFailureException ex)
             {
-                log.Warn("Could not handle user '" + user.Uuid + "' at the moment, will try later");
+                log.Warn("Could not handle user '" + user.Uuid + "' at the moment, will try later", ex);
 
                 return -1;
             }
@@ -234,9 +234,9 @@ namespace Organisation.SchedulingLayer
 
                 return 0;
             }
-            catch (TemporaryFailureException)
+            catch (TemporaryFailureException ex)
             {
-                log.Warn("Could not handle ou '" + ou.Uuid + "' at the moment, will try later");
+                log.Warn("Could not handle ou '" + ou.Uuid + "' at the moment, will try later", ex);
                 return -1;
             }
             catch (Exception ex)

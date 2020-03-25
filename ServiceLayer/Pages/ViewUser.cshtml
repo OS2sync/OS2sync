@@ -50,7 +50,7 @@
                     <ul>
                         @foreach (var position in user.Positions)
                         {
-                            <li><a href="~/ViewOU?uuid=@position.OU?.Uuid">@position.Name (@position.OU?.Uuid)</a></li>
+                            <li><a href="ViewOU?uuid=@position.OU?.Uuid">@position.Name (@position.OU?.Uuid)</a></li>
                         }
                     </ul>
                 </td>

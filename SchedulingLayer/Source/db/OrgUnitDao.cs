@@ -126,7 +126,6 @@ namespace Organisation.SchedulingLayer
                             orgUnit.ParentOrgUnitUuid = GetValue(reader, "parent_ou_uuid");
                             orgUnit.PayoutUnitUuid = GetValue(reader, "payout_ou_uuid");
                             orgUnit.ManagerUuid = GetValue(reader, "manager_uuid");
-                            orgUnit.Type = (OrgUnitType)Enum.Parse(typeof(OrgUnitType), GetValue(reader, "orgunit_type"));
                             orgUnit.LOSShortName = GetValue(reader, "los_shortname");
                             orgUnit.PhoneNumber = GetValue(reader, "phone_number");
                             orgUnit.Email = GetValue(reader, "email");
@@ -140,9 +139,17 @@ namespace Organisation.SchedulingLayer
                             orgUnit.Contact = GetValue(reader, "contact");
                             orgUnit.PostReturn = GetValue(reader, "post_return");
                             orgUnit.PhoneOpenHours = GetValue(reader, "phone_open_hours");
-                            
                             orgUnit.Operation = (OperationType)Enum.Parse(typeof(OperationType), GetValue(reader, "operation"));
                             orgUnit.Cvr = GetValue(reader, "cvr");
+
+                            // type can be null on DELETEs                        
+                            string tmpType = GetValue(reader, "orgunit_type");
+                            if (!string.IsNullOrEmpty(tmpType)) {
+                                orgUnit.Type = (OrgUnitType)Enum.Parse(typeof(OrgUnitType), tmpType);    
+                            }
+                            else {
+                                orgUnit.Type = OrgUnitType.DEPARTMENT;
+                            }
 
                             result.Add(orgUnit);
                         }

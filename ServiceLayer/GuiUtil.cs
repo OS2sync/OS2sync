@@ -63,7 +63,7 @@ namespace Organisation.ServiceLayer
                         builder.Append("{");
                         builder.Append("'id': '" + ou.Uuid + "',");
                         builder.Append("'parent': '" + (ou.ParentOU?.Uuid != null ? ou.ParentOU.Uuid : "#") + "',");
-                        builder.Append("'text': '" + ou.Name + "'");
+                        builder.Append("'text': '" + StripBadStuff(ou.Name) + "'");
                         builder.Append("}");
 
                         ouNameCache.Add(ou.Uuid, ou.Name);
@@ -81,6 +81,10 @@ namespace Organisation.ServiceLayer
             }
 
             return "[]";
+        }
+
+        private static string StripBadStuff(string name) {
+            return name.Replace('\'', ' ');
         }
 
         public static string GetOUName(string uuid)

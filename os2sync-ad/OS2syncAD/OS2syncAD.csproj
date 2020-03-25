@@ -1,0 +1,58 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <StartupObject>OS2syncAD.Program</StartupObject>
+    <ApplicationIcon />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Evolve" Version="2.2.0" />
+    <PackageReference Include="log4net" Version="2.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.2" />
+    <PackageReference Include="MySqlConnector" Version="0.62.0" />
+    <PackageReference Include="Quartz" Version="3.0.7" />
+    <PackageReference Include="System.DirectoryServices" Version="4.7.0" />
+    <PackageReference Include="System.Private.ServiceModel" Version="4.7.0" />
+    <PackageReference Include="System.ServiceModel.Duplex" Version="4.3.0" />
+    <PackageReference Include="System.ServiceModel.Http" Version="4.3.0" />
+    <PackageReference Include="System.ServiceModel.NetTcp" Version="4.3.0" />
+    <PackageReference Include="System.ServiceModel.Security" Version="4.3.0" />
+    <PackageReference Include="System.Xml.XmlSerializer" Version="4.3.0" />
+    <PackageReference Include="Topshelf" Version="4.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="BusinessLayer">
+      <HintPath>\\vboxsvr\brian\projects\os2sync-ad\References\OS2sync\BusinessLayer.dll</HintPath>
+    </Reference>
+    <Reference Include="IntegrationLayer">
+      <HintPath>\\vboxsvr\brian\projects\os2sync-ad\References\OS2sync\IntegrationLayer.dll</HintPath>
+    </Reference>
+    <Reference Include="SchedulingLayer">
+      <HintPath>\\vboxsvr\brian\projects\os2sync-ad\References\OS2sync\SchedulingLayer.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="log.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="mssql\V1_0_0_0__Init.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="mssql\V1_0_0_1__Success_Failure_Tables.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="mssql\V1_2_0_0__AD.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
