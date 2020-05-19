@@ -59,6 +59,11 @@ namespace OS2syncAD
                     user.Email = ((ADSingleValueAttribute)anEvent.ADAttributes.GetField(AppConfiguration.UserAttributeMail)).Value;
                 }
 
+                if (!string.IsNullOrEmpty(AppConfiguration.UserAttributeRacfID) && anEvent.ADAttributes.Contains(AppConfiguration.UserAttributeRacfID))
+                {
+                    user.RacfID = ((ADSingleValueAttribute)anEvent.ADAttributes.GetField(AppConfiguration.UserAttributeRacfID)).Value;
+                }
+
                 if (!string.IsNullOrEmpty(AppConfiguration.UserAttributePersonCpr) && anEvent.ADAttributes.Contains(AppConfiguration.UserAttributePersonCpr))
                 {
                     user.Person.Cpr = getSingleAttribute(anEvent, AppConfiguration.UserAttributePersonCpr);
@@ -107,6 +112,11 @@ namespace OS2syncAD
                 if (!string.IsNullOrEmpty(AppConfiguration.OUAttributeLOSShortName) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributeLOSShortName))
                 {
                     orgUnit.LOSShortName = getSingleAttribute(anEvent, AppConfiguration.OUAttributeLOSShortName);
+                }
+
+                if (!string.IsNullOrEmpty(AppConfiguration.OUAttributeLOSId) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributeLOSId))
+                {
+                    orgUnit.LOSId = getSingleAttribute(anEvent, AppConfiguration.OUAttributeLOSId);
                 }
 
                 if (!string.IsNullOrEmpty(AppConfiguration.OUAttributePayoutUnitUUID) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributePayoutUnitUUID))

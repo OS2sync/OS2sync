@@ -74,6 +74,14 @@ namespace OS2syncAD
             }
         }
 
+        public static string OUAttributeLOSId
+        {
+            get
+            {
+                return configuration["AD:OrgUnitAttributes:LOSId"];
+            }
+        }
+
         public static string OUAttributeLOSShortName
         {
             get
@@ -130,6 +138,14 @@ namespace OS2syncAD
             get
             {
                 return configuration["AD:UserAttributes:Mail"];
+            }
+        }
+
+        public static string UserAttributeRacfID
+        {
+            get
+            {
+                return configuration["AD:UserAttributes:RacfID"];
             }
         }
 
