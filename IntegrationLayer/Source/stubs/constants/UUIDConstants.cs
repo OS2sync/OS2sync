@@ -20,6 +20,7 @@
         public const string ADDRESS_ROLE_ORGUNIT_PHONE = "8dcfa714-5ed3-4000-b551-2ba520e7d8ad";
         public const string ADDRESS_ROLE_ORGUNIT_LANDLINE = "02826f64-5613-468e-ace5-3f089cb3ed20"; // not used
         public const string ADDRESS_ROLE_ORGUNIT_LOSSHORTNAME = "47a33082-4687-4a68-b82f-5bf6f9d8ee13";
+        public const string ADDRESS_ROLE_ORGUNIT_LOSID = "ee78e99a-6220-48ea-81fe-e4db239ee10a";
         public const string ADDRESS_ROLE_ORGUNIT_LOCATION = "ec387d90-263c-4cce-8de2-63b407a0daac";
         public const string ADDRESS_ROLE_ORGUNIT_PHONE_OPEN_HOURS = "f6fd6117-c718-4254-a6f5-92538ad5a2f4";
         public const string ADDRESS_ROLE_ORGUNIT_CONTACT_ADDRESS_OPEN_HOURS = "f37e5877-1549-4b5d-a53b-819491f0b933";
@@ -28,6 +29,7 @@
         public const string ADDRESS_ROLE_USER_PHONE = "5ef6be2d-59f4-4652-a680-585929924ba9";
         public const string ADDRESS_ROLE_USER_LANDLINE = "47c05422-5379-4c27-9ddf-e02b52b3d961"; // not used
         public const string ADDRESS_ROLE_USER_LOCATION = "ad04ac80-e24a-45a5-9dd9-8537a916ac74";
+        public const string ADDRESS_ROLE_USER_RACFID = "519a2d12-d099-434a-a3a2-a7397db7c741";
 
         public const string ADDRESS_ROLE_ORGFUNCTION_URL = "560cb83d-386d-43c0-aaa2-986a915b087c";
 

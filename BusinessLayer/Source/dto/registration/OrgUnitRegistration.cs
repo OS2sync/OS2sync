@@ -23,6 +23,7 @@ namespace Organisation.BusinessLayer.DTO.Registration
         public OrgUnitType Type { get; set; }
         public string Location { get; set; }
         public string LOSShortName { get; set; }
+        public string LOSId { get; set; }
         public string ContactOpenHours { get; set; }
         public string EmailRemarks { get; set; }
         public string Contact { get; set; }

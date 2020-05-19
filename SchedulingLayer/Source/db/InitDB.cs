@@ -18,13 +18,27 @@ namespace Organisation.SchedulingLayer
                     {
                         string location = OrganisationRegistryProperties.GetInstance().MigrationScriptsPath;
 
-                        var evolve = new Evolve.Evolve(connection, msg => log.Info(msg))
+                        if (OrganisationRegistryProperties.GetInstance().Database.Equals(DatabaseType.MSSQL))
                         {
-                            Locations = new[] { location },
-                            IsEraseDisabled = true
-                        };
+                            var evolve = new Evolve.Evolve(connection, msg => log.Info(msg))
+                            {
+                                Locations = new[] { location },
+                                Schemas = new[] { "dbo" }, // default schema can be NULL in SQL Server, which makes Evolve unhappy
+                                IsEraseDisabled = true
+                            };
 
-                        evolve.Migrate();
+                            evolve.Migrate();
+                        }
+                        else
+                        {
+                            var evolve = new Evolve.Evolve(connection, msg => log.Info(msg))
+                            {
+                                Locations = new[] { location },
+                                IsEraseDisabled = true
+                            };
+
+                            evolve.Migrate();
+                        }
                     }
                     catch (Exception ex)
                     {

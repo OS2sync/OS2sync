@@ -149,7 +149,7 @@ namespace Organisation.BusinessLayer
         private List<AddressRelation> UpdateAddresses(OrgUnitRegistration registration, global::IntegrationLayer.OrganisationEnhed.RegistreringType1 result)
         {
             // check what already exists in Organisation - and store the UUIDs of the existing addresses, we will need those later
-            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null, orgLOSShortNameUuid = null, orgEanUuid = null, orgContactHoursUuid = null, orgPhoneHoursUuid = null, orgPostUuid = null, orgPostReturnUuid = null, orgContactUuid = null, orgEmailRemarksUuid = null, orgLandlineUuid = null, orgUrlUuid = null;
+            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null, orgLOSShortNameUuid = null, orgEanUuid = null, orgContactHoursUuid = null, orgPhoneHoursUuid = null, orgPostUuid = null, orgPostReturnUuid = null, orgContactUuid = null, orgEmailRemarksUuid = null, orgLandlineUuid = null, orgUrlUuid = null, orgLosIdUuid = null;
 
             if (result.RelationListe.Adresser != null)
             {
@@ -170,6 +170,10 @@ namespace Organisation.BusinessLayer
                     else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSSHORTNAME))
                     {
                         orgLOSShortNameUuid = orgAddress.ReferenceID.Item;
+                    }
+                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSID))
+                    {
+                        orgLosIdUuid = orgAddress.ReferenceID.Item;
                     }
                     else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_URL))
                     {
@@ -261,6 +265,16 @@ namespace Organisation.BusinessLayer
                 {
                     Uuid = uuid,
                     Type = AddressRelationType.EAN
+                });
+            }
+
+            ServiceHelper.UpdateAddress(registration.LOSId, orgLosIdUuid, registration.Timestamp, out uuid);
+            if (uuid != null)
+            {
+                addressRefs.Add(new AddressRelation()
+                {
+                    Uuid = uuid,
+                    Type = AddressRelationType.LOSID
                 });
             }
 
@@ -401,6 +415,19 @@ namespace Organisation.BusinessLayer
                     {
                         Uuid = uuid,
                         Type = AddressRelationType.LOSSHORTNAME
+                    });
+                }
+            }
+
+            if (!string.IsNullOrEmpty(registration.LOSId))
+            {
+                ServiceHelper.ImportAddress(registration.LOSId, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.LOSID
                     });
                 }
             }
@@ -591,6 +618,10 @@ namespace Organisation.BusinessLayer
                     else if (address is DTO.Read.LOSShortName)
                     {
                         registration.LOSShortName = address.Value;
+                    }
+                    else if (address is DTO.Read.LOSID)
+                    {
+                        registration.LOSId = address.Value;
                     }
                     else if (address is DTO.Read.PostReturn)
                     {

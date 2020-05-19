@@ -43,6 +43,7 @@ namespace Organisation.SchedulingLayer
 
                             command.Parameters.Add(DaoUtil.GetParameter("@orgunit_type", ou.Type.ToString()));
                             command.Parameters.Add(DaoUtil.GetParameter("@los_shortname", (object)ou.LOSShortName ?? DBNull.Value));
+                            command.Parameters.Add(DaoUtil.GetParameter("@los_id", (object)ou.LOSId ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@phone_number", (object)ou.PhoneNumber ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@url", (object)ou.Url ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@landline", (object)ou.Landline ?? DBNull.Value));
@@ -127,6 +128,7 @@ namespace Organisation.SchedulingLayer
                             orgUnit.PayoutUnitUuid = GetValue(reader, "payout_ou_uuid");
                             orgUnit.ManagerUuid = GetValue(reader, "manager_uuid");
                             orgUnit.LOSShortName = GetValue(reader, "los_shortname");
+                            orgUnit.LOSId = GetValue(reader, "losid");
                             orgUnit.PhoneNumber = GetValue(reader, "phone_number");
                             orgUnit.Email = GetValue(reader, "email");
                             orgUnit.Landline = GetValue(reader, "landline");

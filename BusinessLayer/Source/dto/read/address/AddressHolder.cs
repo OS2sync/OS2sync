@@ -15,6 +15,8 @@ namespace Organisation.BusinessLayer.DTO.Read
     [XmlInclude(typeof(ContactHours))]
     [XmlInclude(typeof(Landline))]
     [XmlInclude(typeof(Ean))]
+    [XmlInclude(typeof(RacfID))]
+    [XmlInclude(typeof(LOSID))]
     [XmlInclude(typeof(Post))]
     [XmlRoot(ElementName = "AddressHolder")]
     [Serializable]

@@ -13,6 +13,7 @@ namespace Organisation.BusinessLayer.DTO.Registration
 
         public string PhoneNumber { get; set; }
         public string Email { get; set; }
+        public string RacfID { get; set;}
         public string Location { get; set; }
 
         public List<Position> Positions { get; set; } = new List<Position>();

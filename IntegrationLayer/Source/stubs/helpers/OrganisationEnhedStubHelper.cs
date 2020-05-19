@@ -390,6 +390,10 @@ namespace Organisation.IntegrationLayer
                         AdresseFlerRelationType eanAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_EAN, virkning);
                         registration.RelationListe.Adresser[i] = eanAddress;
                         break;
+                    case AddressRelationType.LOSID:
+                        AdresseFlerRelationType losIdAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSID, virkning);
+                        registration.RelationListe.Adresser[i] = losIdAddress;
+                        break;
                     case AddressRelationType.PHONE_OPEN_HOURS:
                         AdresseFlerRelationType phoneOpenHoursAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_PHONE_OPEN_HOURS, virkning);
                         registration.RelationListe.Adresser[i] = phoneOpenHoursAddress;

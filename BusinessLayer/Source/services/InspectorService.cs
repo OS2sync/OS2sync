@@ -653,7 +653,16 @@ namespace Organisation.BusinessLayer
 
                 if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_EMAIL))
                 {
-                    addresses.Add(new Email()
+                    addresses.Add(new RacfID()
+                    {
+                        Uuid = addressUuid,
+                        ShortKey = addressShortKey,
+                        Value = addressValue
+                    });
+                }
+                else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_RACFID))
+                {
+                    addresses.Add(new Location()
                     {
                         Uuid = addressUuid,
                         ShortKey = addressShortKey,
@@ -708,6 +717,15 @@ namespace Organisation.BusinessLayer
             if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_EMAIL))
             {
                 addresses.Add(new Email()
+                {
+                    Uuid = addressUuid,
+                    ShortKey = addressShortKey,
+                    Value = addressValue
+                });
+            }
+            else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_RACFID))
+            {
+                addresses.Add(new RacfID()
                 {
                     Uuid = addressUuid,
                     ShortKey = addressShortKey,
@@ -1030,10 +1048,11 @@ namespace Organisation.BusinessLayer
                     break;
                 }
 
-                var res = organisationSystemStub.Read("500", "" + offset);
-                offset += res.Count;
+                bool moreData = false;
+                var res = organisationSystemStub.Read("500", "" + offset, out moreData);
+                offset += 500;
 
-                if (res.Count == 0)
+                if (!moreData)
                 {
                     break;
                 }
@@ -1171,6 +1190,13 @@ namespace Organisation.BusinessLayer
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSSHORTNAME))
                         {
                             addresses.Add(new LOSShortName()
+                            {
+                                Uuid = addressUuid
+                            });
+                        }
+                        else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSID))
+                        {
+                            addresses.Add(new LOSID()
                             {
                                 Uuid = addressUuid
                             });

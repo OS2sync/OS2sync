@@ -180,6 +180,9 @@ namespace Organisation.IntegrationLayer
                                     case AddressRelationType.EAN:
                                         roleUuid = UUIDConstants.ADDRESS_ROLE_ORGUNIT_EAN;
                                         break;
+                                    case AddressRelationType.LOSID:
+                                        roleUuid = UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSID;
+                                        break;
                                     case AddressRelationType.EMAIL_REMARKS:
                                         roleUuid = UUIDConstants.ADDRESS_ROLE_ORGUNIT_EMAIL_REMARKS;
                                         break;

@@ -89,7 +89,7 @@ namespace Organisation.SchedulingLayer
                     Parallel.ForEach(users, (user) => {
 
                         var task = Task.Run(() => HandleUser(user, service, dao));
-                        if (task.Wait(TimeSpan.FromSeconds(15)))
+                        if (task.Wait(TimeSpan.FromSeconds(35)))
                         {
                             int result = task.Result;
 
@@ -114,6 +114,10 @@ namespace Organisation.SchedulingLayer
                                     break;
                             }
                         }
+			else
+			{
+                            log.Warn("Timeout happended while waiting for synchronization of user: " + user.Uuid);
+			}
                     });
 
                     count += subCounter;
@@ -177,7 +181,7 @@ namespace Organisation.SchedulingLayer
                     Parallel.ForEach(orgUnits, (orgUnit) => {
                         var task = Task.Run(() => HandleOU(orgUnit, service, dao));
 
-                        if (task.Wait(TimeSpan.FromSeconds(15)))
+                        if (task.Wait(TimeSpan.FromSeconds(35)))
                         {
                             int result = task.Result;
 
@@ -202,6 +206,10 @@ namespace Organisation.SchedulingLayer
                                     break;
                             }
                         }
+			else
+			{
+		                log.Warn("Timeout happended while waiting for synchronization of OrgUnit: " + orgUnit.Uuid);
+			}
                     });
 
                     count += subCounter;

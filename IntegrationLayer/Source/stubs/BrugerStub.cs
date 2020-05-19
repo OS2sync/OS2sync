@@ -215,6 +215,9 @@ namespace Organisation.IntegrationLayer
                                     case AddressRelationType.LOCATION:
                                         roleUuid = UUIDConstants.ADDRESS_ROLE_USER_LOCATION;
                                         break;
+                                    case AddressRelationType.RACFID:
+                                        roleUuid = UUIDConstants.ADDRESS_ROLE_USER_RACFID;
+                                        break;
                                     default:
                                         log.Warn("Cannot add relationship to address of type " + addressInLocal.Type + " with uuid " + addressInLocal.Uuid + " as the type is unknown");
                                         continue;

@@ -39,6 +39,7 @@ namespace Organisation.SchedulingLayer
                             command.Parameters.Add(DaoUtil.GetParameter("@name", user.Person.Name ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@cpr", user.Person.Cpr ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@email", user.Email ?? (object)DBNull.Value));
+                            command.Parameters.Add(DaoUtil.GetParameter("@racfid", user.RacfID ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@location", user.Location ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@cvr", cvr));
                             command.Parameters.Add(DaoUtil.GetParameter("@operation", operation.ToString()));
@@ -93,6 +94,7 @@ namespace Organisation.SchedulingLayer
 
                             user.PhoneNumber = GetValue(reader, "phone_number");
                             user.Email = GetValue(reader, "email");
+                            user.RacfID = GetValue(reader, "racfid");
                             user.Location = GetValue(reader, "location");
 
                             user.UserId = GetValue(reader, "user_id");

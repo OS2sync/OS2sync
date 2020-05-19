@@ -162,6 +162,10 @@ namespace Organisation.BusinessLayer
                     {
                         registration.PhoneNumber = address.Value;
                     }
+                    else if (address is DTO.Read.RacfID)
+                    {
+                        registration.RacfID = address.Value;
+                    }
                     else
                     {
                         log.Warn("Trying to Read user " + uuid + " with unknown address type " + address.GetType().ToString());
@@ -211,6 +215,19 @@ namespace Organisation.BusinessLayer
                 }
             }
 
+            if (!string.IsNullOrEmpty(registration.RacfID))
+            {
+                ServiceHelper.ImportAddress(registration.RacfID, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.RACFID
+                    });
+                }
+            }
+
             if (!string.IsNullOrEmpty(registration.Location))
             {
                 ServiceHelper.ImportAddress(registration.Location, registration.Timestamp, out uuid);
@@ -230,23 +247,27 @@ namespace Organisation.BusinessLayer
         private List<AddressRelation> UpdateAddresses(UserRegistration registration, global::IntegrationLayer.Bruger.RegistreringType1 result)
         {
             // check what already exists in Organisation - and store the UUIDs of the existing addresses, we will need those later
-            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null;
+            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null, orgRacfIDUuid = null;
 
             if (result.RelationListe.Adresser != null)
             {
                 foreach (var orgAddress in result.RelationListe.Adresser)
                 {
-                    if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_PHONE))
+                    if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_PHONE))
                     {
                         orgPhoneUuid = orgAddress.ReferenceID.Item;
                     }
-                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_EMAIL))
+                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_EMAIL))
                     {
                         orgEmailUuid = orgAddress.ReferenceID.Item;
                     }
-                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOCATION))
+                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_LOCATION))
                     {
                         orgLocationUuid = orgAddress.ReferenceID.Item;
+                    }
+                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_RACFID))
+                    {
+                        orgRacfIDUuid = orgAddress.ReferenceID.Item;
                     }
                 }
             }
@@ -272,6 +293,16 @@ namespace Organisation.BusinessLayer
                 {
                     Uuid = uuid,
                     Type = AddressRelationType.EMAIL
+                });
+            }
+
+            ServiceHelper.UpdateAddress(registration.RacfID, orgRacfIDUuid, registration.Timestamp, out uuid);
+            if (uuid != null)
+            {
+                addressRefs.Add(new AddressRelation()
+                {
+                    Uuid = uuid,
+                    Type = AddressRelationType.RACFID
                 });
             }
 

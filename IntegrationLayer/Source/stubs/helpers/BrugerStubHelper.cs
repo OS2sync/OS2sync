@@ -225,6 +225,10 @@ namespace Organisation.IntegrationLayer
                         AdresseFlerRelationType emailAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_EMAIL, virkning);
                         registration.RelationListe.Adresser[i] = emailAddress;
                         break;
+                    case AddressRelationType.RACFID:
+                        AdresseFlerRelationType racfId = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_RACFID, virkning);
+                        registration.RelationListe.Adresser[i] = racfId;
+                        break;
                     case AddressRelationType.PHONE:
                         AdresseFlerRelationType phoneAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_PHONE, virkning);
                         registration.RelationListe.Adresser[i] = phoneAddress;

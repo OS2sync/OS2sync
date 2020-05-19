@@ -13,8 +13,10 @@ namespace Organisation.IntegrationLayer
         private OrganisationSystemStubHelper helper = new OrganisationSystemStubHelper();
         private OrganisationRegistryProperties registry = OrganisationRegistryProperties.GetInstance();
 
-        public List<OrgUnitRegWrapper> Read(string antal, string offset)
+        public List<OrgUnitRegWrapper> Read(string antal, string offset, out Boolean moreData)
         {
+            moreData = false; // initialize to no-more-data
+
             FremsoegObjekthierarkiInputType input = new FremsoegObjekthierarkiInputType();
             input.MaksimalAntalKvantitet = antal;
             input.FoersteResultatReference = offset;
@@ -40,6 +42,20 @@ namespace Organisation.IntegrationLayer
                     throw new SoapServiceException(message);
                 }
 
+                var output = result.FremsoegobjekthierarkiResponse1.FremsoegObjekthierarkiOutput;
+                if (log.IsDebugEnabled)
+                {
+                    log.Debug("Found: " + output.OrganisationEnheder.Length + " Enheder, " +
+                                          output.Interessefaellesskaber.Length + " Interessefaellesskaber, " +
+                                          output.ItSystemer.Length + " ItSystemer, " +
+                                          output.Organisationer.Length + " Organisationer, " +
+                                          output.OrganisationFunktioner.Length + " OrganisationFunktioner");
+                }
+
+                if (output.OrganisationEnheder.Length > 0)
+                {
+                    moreData = true;
+                }
 
                 List<OrgUnitRegWrapper> registrations = new List<OrgUnitRegWrapper>();
 
@@ -63,10 +79,19 @@ namespace Organisation.IntegrationLayer
                             log.Warn("OU in hierarchy does has more than one registration: " + uuid);
                         }
 
-                        registrations.Add(new OrgUnitRegWrapper() {
-                            Uuid = uuid,
-                            Registration = ou.Registrering[0]
-                        });
+                        var reg = ou.Registrering[0];
+
+                        if (StubUtil.GetMunicipalityOrganisationUUID().Equals(reg.RelationListe?.Tilhoerer?.ReferenceID?.Item))
+                        {
+                            registrations.Add(new OrgUnitRegWrapper() {
+                                Uuid = uuid,
+                                Registration = reg
+                            });
+                        }
+                        else
+                        {
+                            log.Warn("Skipping OrgUnit with Tilhoerer relation unknown Organisation: " + reg.RelationListe?.Tilhoerer?.ReferenceID?.Item);
+                        }
                     }
                 }
 

@@ -66,7 +66,13 @@ namespace Organisation.ServiceLayer
                         builder.Append("'text': '" + StripBadStuff(ou.Name) + "'");
                         builder.Append("}");
 
-                        ouNameCache.Add(ou.Uuid, ou.Name);
+                        if (!ouNameCache.ContainsKey(ou.Uuid))
+                        {
+                            ouNameCache.Add(ou.Uuid, ou.Name);
+                        }
+                        else {
+                            log.Warn("OrgUnit (" + ou.Uuid + " / " + ou.Name + ") already exists in cache - ignoring duplicate found in response from STS Organisation!");
+                        }
                     }
                     builder.Append("]");
 
