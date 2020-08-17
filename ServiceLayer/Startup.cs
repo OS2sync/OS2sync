@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json.Converters;
 
 namespace Organisation.ServiceLayer
 {
@@ -27,7 +28,12 @@ namespace Organisation.ServiceLayer
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
 
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            services.AddMvc()
+                .SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
+                .AddJsonOptions(options =>
+                    {
+                        options.SerializerSettings.Converters.Add(new StringEnumConverter());
+                    });
         }
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)

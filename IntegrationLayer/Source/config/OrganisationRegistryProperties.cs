@@ -21,11 +21,15 @@ namespace Organisation.IntegrationLayer
         private const string DB_TYPE_STRING_KEY = "DatabaseType";
         private const string CLIENTCERT_PATH_KEY = "ClientCertPath";
         private const string CLIENTCERT_PASSWORD_KEY = "ClientCertPassword";
+        private const string SSL_ENABLED = "SslEnabled";
+        private const string SSL_KEYSTORE_PATH = "SslKeystorePath";
+        private const String SSL_KEYSTORE_PASSWORD = "SslKeystorePassword";
         private const string ENVIRONMENT_KEY = "Environment";
         private const string LOG_LEVEL_KEY = "LogLevel";
         private const string MUNICIPALITY_KEY = "Municipality";
         private const string API_KEY = "ApiKey";
         private const string ENABLE_SCHEDULER_KEY = "EnableScheduler";
+        private const string DISABLE_KLE_OPGAVER = "DisableKleOpgaver";
 
         private static OrganisationRegistryProperties instance;
 
@@ -42,6 +46,10 @@ namespace Organisation.IntegrationLayer
         public string DefaultMunicipality { get; set; }
         public Level LogLevel { get; set;} = Level.Info; // default
         public string MigrationScriptsPath { get; set; }
+        public bool DisableKleOpgaver { get; set; }
+        public bool SslEnabled { get; set; }
+        public string SslKeystorePath { get; set; }
+        public string SslKeystorePassword { get; set; }
 
         [ThreadStatic]
         private static string MunicipalityThreadValue;
@@ -107,6 +115,14 @@ namespace Organisation.IntegrationLayer
             DisableRevocationCheck = "true".Equals(configuration[REVOCATION_CHECK_KEY]);
             DefaultMunicipality = configuration[MUNICIPALITY_KEY];
             EnableScheduler = "true".Equals(configuration[ENABLE_SCHEDULER_KEY]);
+            DisableKleOpgaver = "true".Equals(configuration[DISABLE_KLE_OPGAVER]);
+
+            SslEnabled = "true".Equals(configuration[SSL_ENABLED]);
+            if (SslEnabled)
+            {
+                SslKeystorePath = configuration[SSL_KEYSTORE_PATH];
+                SslKeystorePassword = configuration[SSL_KEYSTORE_PASSWORD];
+            }
 
             DatabaseType type;
             Enum.TryParse(configuration[DB_TYPE_STRING_KEY], out type);

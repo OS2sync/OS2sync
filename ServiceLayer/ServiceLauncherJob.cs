@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using System.IO;
+using System.Net;
 
 namespace Organisation.ServiceLayer
 {
@@ -33,13 +34,29 @@ namespace Organisation.ServiceLayer
 
         private static IWebHost BuildWebHost()
         {
-            return new WebHostBuilder()
-                .UseKestrel()
-                .UseContentRoot(Directory.GetCurrentDirectory())
-                .UseIISIntegration()
-                .UseUrls("http://*:5000")
-                .UseStartup<Startup>()
-                .Build();
+            if (IntegrationLayer.OrganisationRegistryProperties.GetInstance().SslEnabled)
+            {
+                return new WebHostBuilder()
+                    .UseKestrel(options =>
+                    {
+                        options.Listen(IPAddress.Any, 5000, listenOptions =>
+                        {
+                            listenOptions.UseHttps(IntegrationLayer.OrganisationRegistryProperties.GetInstance().SslKeystorePath, IntegrationLayer.OrganisationRegistryProperties.GetInstance().SslKeystorePassword);
+                        });
+                    })
+                    .UseContentRoot(Directory.GetCurrentDirectory())
+                    .UseIISIntegration()
+                    .UseStartup<Startup>()
+                    .Build();
+            }
+
+                return new WebHostBuilder()
+                    .UseKestrel()
+                    .UseContentRoot(Directory.GetCurrentDirectory())
+                    .UseIISIntegration()
+                    .UseUrls("http://*:5000")
+                    .UseStartup<Startup>()
+                    .Build();
         }
     }
 }

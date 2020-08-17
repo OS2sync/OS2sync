@@ -37,7 +37,7 @@ namespace Organisation.IntegrationLayer
                 int statusCode = Int32.Parse(result.FremsoegobjekthierarkiResponse1.FremsoegObjekthierarkiOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
-                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "FremsoegObjektHierarki", OrganisationFunktionStubHelper.SERVICE, result.FremsoegobjekthierarkiResponse1.FremsoegObjekthierarkiOutput.StandardRetur.FejlbeskedTekst);
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "FremsoegObjektHierarki", OrganisationSystemStubHelper.SERVICE, result.FremsoegobjekthierarkiResponse1.FremsoegObjekthierarkiOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
@@ -99,7 +99,7 @@ namespace Organisation.IntegrationLayer
             }
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Importer service on OrganisationFunktion", ex);
+                throw new ServiceNotFoundException("Failed to establish connection to the Importer service on OrganisationSystem", ex);
             }
         }
     }

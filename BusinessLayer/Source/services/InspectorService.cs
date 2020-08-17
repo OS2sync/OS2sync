@@ -653,7 +653,7 @@ namespace Organisation.BusinessLayer
 
                 if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_EMAIL))
                 {
-                    addresses.Add(new RacfID()
+                    addresses.Add(new Email()
                     {
                         Uuid = addressUuid,
                         ShortKey = addressShortKey,
@@ -662,7 +662,7 @@ namespace Organisation.BusinessLayer
                 }
                 else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_RACFID))
                 {
-                    addresses.Add(new Location()
+                    addresses.Add(new RacfID()
                     {
                         Uuid = addressUuid,
                         ShortKey = addressShortKey,

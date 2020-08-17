@@ -36,6 +36,11 @@ namespace Organisation.IntegrationLayer
 
         internal bool UpdateOpgaver(List<string> opgaver, VirkningType virkning, RegistreringType1 registration, DateTime timestamp)
         {
+            if (registryProperties.DisableKleOpgaver)
+            {
+                return false;
+            }
+
             bool changes = false;
 
             // make sure we have a list to work with below
