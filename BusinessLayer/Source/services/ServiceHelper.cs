@@ -343,7 +343,7 @@ namespace Organisation.BusinessLayer
 
         internal static void UpdateAddress(string address, string orgUuid, DateTime timestamp, out string uuid)
         {
-            uuid = orgUuid; // default to input - the caller can then ALWAYS use this for relationship mapping
+            uuid = null;
 
             if (address != null)
             {
@@ -360,6 +360,7 @@ namespace Organisation.BusinessLayer
                     }
                     else
                     {
+                        uuid = orgUuid;
                         adresseStub.Ret(orgUuid, address, timestamp, result);
                     }
                 }

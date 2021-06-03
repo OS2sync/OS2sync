@@ -1,9 +1,9 @@
 ﻿using Quartz;
-using Quartz.Impl;
 using Organisation.IntegrationLayer;
 using Organisation.BusinessLayer;
 using System;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace Organisation.SchedulingLayer
 {
@@ -34,23 +34,22 @@ namespace Organisation.SchedulingLayer
                 }
                 catch (Exception ex)
                 {
+                    errorCount++;
+
                     switch (errorCount)
                     {
-                        case 0:
-                            errorCount = 1;
-                            break;
                         case 1:
-                            errorCount = 3;
+                            nextRun = DateTime.Now.AddMinutes(1);
                             break;
-                        case 3:
-                            errorCount = 6;
+                        case 2:
+                            nextRun = DateTime.Now.AddMinutes(3);
+                            break;
+                        default:
+                            nextRun = DateTime.Now.AddMinutes(5);
                             break;
                     }
 
-                    // wait 5 minutes, then 15 minutes and finally 30 minutes between each run
-                    nextRun = DateTime.Now.AddMinutes(5 * errorCount);
-
-                    if (errorCount < 6)
+                    if (errorCount < 10)
                     {
                         log.Warn("Failed to run scheduler, sleeping until: " + nextRun.ToString("MM/dd/yyyy HH:mm"), ex);
                     }
@@ -87,37 +86,42 @@ namespace Organisation.SchedulingLayer
                     int subCounter = 0;
 
                     Parallel.ForEach(users, (user) => {
-
-                        var task = Task.Run(() => HandleUser(user, service, dao));
-                        if (task.Wait(TimeSpan.FromSeconds(35)))
+                        using (var cancelTokenSource = new CancellationTokenSource())
                         {
-                            int result = task.Result;
-
-                            switch (result)
+                            var cancelToken = cancelTokenSource.Token;
+                            var task = Task.Run(() => HandleUser(user, service, dao), cancelToken);
+                            if (task.Wait(TimeSpan.FromSeconds(300)))
                             {
-                                case -1:
-                                    // we are not increment subcounter here, as this is a temporary failure, and we should sleep
-                                    break;
-                                case -2:
-                                    // bad data, it was logged and then throw away, nothing to see here, move along
-                                    lock (users)
-                                    {
-                                        subCounter++;
-                                    }
-                                    break;
-                                default:
-                                    lock (users)
-                                    {
-                                        subCounter++;
-                                    }
-                                    errorCount = 0;
-                                    break;
+                                int result = task.Result;
+
+                                switch (result)
+                                {
+                                    case -1:
+                                        // we are not increment subcounter here, as this is a temporary failure, and we should sleep
+                                        break;
+                                    case -2:
+                                        // bad data, it was logged and then throw away, nothing to see here, move along
+                                        lock (users)
+                                        {
+                                            subCounter++;
+                                        }
+                                        break;
+                                    default:
+                                        lock (users)
+                                        {
+                                            subCounter++;
+                                        }
+                                        errorCount = 0;
+                                        break;
+                                }
+                            }
+                            else
+                            {
+                                log.Warn("Timeout happended while waiting for synchronization of user: " + user.Uuid);
+
+                                cancelTokenSource.Cancel();
                             }
                         }
-			else
-			{
-                            log.Warn("Timeout happended while waiting for synchronization of user: " + user.Uuid);
-			}
                     });
 
                     count += subCounter;
@@ -177,39 +181,46 @@ namespace Organisation.SchedulingLayer
                 if (orgUnits.Count > 0)
                 {
                     int subCounter = 0;
-
-                    Parallel.ForEach(orgUnits, (orgUnit) => {
-                        var task = Task.Run(() => HandleOU(orgUnit, service, dao));
-
-                        if (task.Wait(TimeSpan.FromSeconds(35)))
+                        
+                    Parallel.ForEach(orgUnits, (orgUnit) =>
+                    {
+                        using (var cancelTokenSource = new CancellationTokenSource())
                         {
-                            int result = task.Result;
+                            var cancelToken = cancelTokenSource.Token;
+                            var task = Task.Run(() => HandleOU(orgUnit, service, dao), cancelToken);
 
-                            switch (result)
+                            if (task.Wait(TimeSpan.FromSeconds(300)))
                             {
-                                case -1:
-                                    // we are not increment subcounter here, as this is a temporary failure, and we should sleep
-                                    break;
-                                case -2:
-                                    // bad data, it was logged and then throw away, nothing to see here, move along
-                                    lock (orgUnits)
-                                    {
-                                        subCounter++;
-                                    }
-                                    break;
-                                default:
-                                    lock (orgUnits)
-                                    {
-                                        subCounter++;
-                                    }
-                                    errorCount = 0;
-                                    break;
+                                int result = task.Result;
+
+                                switch (result)
+                                {
+                                    case -1:
+                                        // we are not increment subcounter here, as this is a temporary failure, and we should sleep
+                                        break;
+                                    case -2:
+                                        // bad data, it was logged and then throw away, nothing to see here, move along
+                                        lock (orgUnits)
+                                        {
+                                            subCounter++;
+                                        }
+                                        break;
+                                    default:
+                                        lock (orgUnits)
+                                        {
+                                            subCounter++;
+                                        }
+                                        errorCount = 0;
+                                        break;
+                                }
+                            }
+                            else
+                            {
+                                log.Warn("Timeout happended while waiting for synchronization of OrgUnit: " + orgUnit.Uuid);
+
+                                cancelTokenSource.Cancel();
                             }
                         }
-			else
-			{
-		                log.Warn("Timeout happended while waiting for synchronization of OrgUnit: " + orgUnit.Uuid);
-			}
                     });
 
                     count += subCounter;

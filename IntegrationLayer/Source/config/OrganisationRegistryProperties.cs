@@ -30,6 +30,8 @@ namespace Organisation.IntegrationLayer
         private const string API_KEY = "ApiKey";
         private const string ENABLE_SCHEDULER_KEY = "EnableScheduler";
         private const string DISABLE_KLE_OPGAVER = "DisableKleOpgaver";
+        private const string DISABLE_HENVENDELSESSTEDER = "DisableHenvendelsessteder";
+        private const string DISABLE_UDBETALINGSENHEDER = "DisableUdbetalingsEnheder";
 
         private static OrganisationRegistryProperties instance;
 
@@ -47,6 +49,8 @@ namespace Organisation.IntegrationLayer
         public Level LogLevel { get; set;} = Level.Info; // default
         public string MigrationScriptsPath { get; set; }
         public bool DisableKleOpgaver { get; set; }
+        public bool DisableHenvendelsessteder { get; set; }
+        public bool DisableUdbetalingsenheder { get; set; }
         public bool SslEnabled { get; set; }
         public string SslKeystorePath { get; set; }
         public string SslKeystorePassword { get; set; }
@@ -116,6 +120,9 @@ namespace Organisation.IntegrationLayer
             DefaultMunicipality = configuration[MUNICIPALITY_KEY];
             EnableScheduler = "true".Equals(configuration[ENABLE_SCHEDULER_KEY]);
             DisableKleOpgaver = "true".Equals(configuration[DISABLE_KLE_OPGAVER]);
+
+            DisableHenvendelsessteder = "true".Equals(configuration[DISABLE_HENVENDELSESSTEDER]);
+            DisableUdbetalingsenheder = "true".Equals(configuration[DISABLE_UDBETALINGSENHEDER]);
 
             SslEnabled = "true".Equals(configuration[SSL_ENABLED]);
             if (SslEnabled)

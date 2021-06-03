@@ -25,6 +25,7 @@ namespace Organisation.BusinessLayer.DTO.Registration
         public string LOSShortName { get; set; }
         public string LOSId { get; set; }
         public string ContactOpenHours { get; set; }
+        public string DtrId { get; set; }
         public string EmailRemarks { get; set; }
         public string Contact { get; set; }
         public string PostReturn { get; set; }

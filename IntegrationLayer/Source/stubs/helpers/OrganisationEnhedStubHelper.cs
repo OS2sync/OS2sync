@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using IntegrationLayer.OrganisationEnhed;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
+using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Organisation.IntegrationLayer
 {
@@ -43,8 +45,9 @@ namespace Organisation.IntegrationLayer
 
             bool changes = false;
 
-            // make sure we have a list to work with below
+            // make sure we have a list to work with below, and that there are no duplicates
             opgaver = (opgaver != null) ? opgaver : new List<string>();
+            opgaver = opgaver.Distinct().ToList();
 
             // find those we need to add (at the end of this method)
             var toAdd = new List<string>();
@@ -73,9 +76,14 @@ namespace Organisation.IntegrationLayer
                 }
             }
 
-            // terminate virkning on elements no longer in local
             if (registration.RelationListe?.Opgaver != null)
             {
+                IEqualityComparer<KlasseFlerRelationType> comparer = new KlasseFlerRelationTypeComparer();
+
+                // remove duplicates from registration.RelationListe.Opgaver (because sometimes we get duplicates back from KMD)
+                registration.RelationListe.Opgaver = registration.RelationListe.Opgaver.Distinct(comparer).ToArray();
+
+                // terminate virkning on elements no longer in local
                 foreach (var opgaveRelation in registration.RelationListe.Opgaver)
                 {
                     string uuid = opgaveRelation.ReferenceID?.Item;
@@ -383,6 +391,10 @@ namespace Organisation.IntegrationLayer
                         AdresseFlerRelationType contactOpenHoursAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_CONTACT_ADDRESS_OPEN_HOURS, virkning);
                         registration.RelationListe.Adresser[i] = contactOpenHoursAddress;
                         break;
+                    case AddressRelationType.DTR_ID:
+                        AdresseFlerRelationType dtrId = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_DTR_ID, virkning);
+                        registration.RelationListe.Adresser[i] = dtrId;
+                        break;
                     case AddressRelationType.URL:
                         AdresseFlerRelationType urlAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_URL, virkning);
                         registration.RelationListe.Adresser[i] = urlAddress;
@@ -448,7 +460,6 @@ namespace Organisation.IntegrationLayer
             binding.OpenTimeout = new TimeSpan(0, 3, 0);
             binding.CloseTimeout = new TimeSpan(0, 3, 0);
             binding.ReceiveTimeout = new TimeSpan(0, 3, 0);
-            binding.ReceiveTimeout = new TimeSpan(0, 3, 0);
             binding.SendTimeout = new TimeSpan(0, 3, 0);
 
             OrganisationEnhedPortTypeClient port = new OrganisationEnhedPortTypeClient(binding, StubUtil.GetEndPointAddress("OrganisationEnhed/5"));
@@ -461,6 +472,29 @@ namespace Organisation.IntegrationLayer
             }
 
             return port;
+        }
+    }
+
+    internal class KlasseFlerRelationTypeComparer : IEqualityComparer<KlasseFlerRelationType>
+    {
+        public bool Equals([AllowNull] KlasseFlerRelationType x, [AllowNull] KlasseFlerRelationType y)
+        {
+            if (string.Compare(x?.ReferenceID?.Item, y?.ReferenceID?.Item) == 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public int GetHashCode([DisallowNull] KlasseFlerRelationType obj)
+        {
+            if (obj?.ReferenceID?.Item == null)
+            {
+                return 0;
+            }
+
+            return obj.ReferenceID.Item.GetHashCode();
         }
     }
 }

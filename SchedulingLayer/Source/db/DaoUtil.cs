@@ -1,8 +1,7 @@
 ﻿using Organisation.IntegrationLayer;
 using System.Data.Common;
-using MySql.Data.MySqlClient;
 using System.Data.SqlClient;
-using System;
+using MySqlConnector;
 
 namespace Organisation.SchedulingLayer
 {

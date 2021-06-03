@@ -33,6 +33,7 @@ namespace Organisation.BusinessLayer.DTO.Read
     [KnownType(typeof(Organisation.BusinessLayer.DTO.Read.Ean))]
     [KnownType(typeof(Organisation.BusinessLayer.DTO.Read.Post))]
     [KnownType(typeof(Organisation.BusinessLayer.DTO.Read.Url))]
+    [KnownType(typeof(Organisation.BusinessLayer.DTO.Read.DtrId))]
     [KnownType(typeof(Organisation.BusinessLayer.DTO.Read.Landline))]
     public abstract class AddressHolder
     {

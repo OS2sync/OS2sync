@@ -76,7 +76,6 @@ namespace Organisation.SchedulingLayer
         public List<UserRegistrationExtended> Get4OldestEntries()
         {
             var users = new List<UserRegistrationExtended>();
-            long user_id = 0;
 
             using (DbConnection connection = DaoUtil.GetConnection())
             {
@@ -89,7 +88,7 @@ namespace Organisation.SchedulingLayer
                         while (reader.Read())
                         {
                             UserRegistrationExtended user = new UserRegistrationExtended();
-                            user_id = (long)reader["id"];
+                            long user_id = (long)reader["id"];
                             user.Id = user_id;
 
                             user.PhoneNumber = GetValue(reader, "phone_number");

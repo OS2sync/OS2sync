@@ -44,7 +44,6 @@ namespace Organisation.IntegrationLayer
             binding.OpenTimeout = new TimeSpan(0, 3, 0);
             binding.CloseTimeout = new TimeSpan(0, 3, 0);
             binding.ReceiveTimeout = new TimeSpan(0, 3, 0);
-            binding.ReceiveTimeout = new TimeSpan(0, 3, 0);
             binding.SendTimeout = new TimeSpan(0, 3, 0);
 
             OrganisationPortTypeClient port = new OrganisationPortTypeClient(binding, StubUtil.GetEndPointAddress("Organisation/5"));

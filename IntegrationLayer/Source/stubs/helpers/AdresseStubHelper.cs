@@ -31,7 +31,6 @@ namespace Organisation.IntegrationLayer
             binding.OpenTimeout = new TimeSpan(0, 3, 0);
             binding.CloseTimeout = new TimeSpan(0, 3, 0);
             binding.ReceiveTimeout = new TimeSpan(0, 3, 0);
-            binding.ReceiveTimeout = new TimeSpan(0, 3, 0);
             binding.SendTimeout = new TimeSpan(0, 3, 0);
 
             AdressePortTypeClient port = new AdressePortTypeClient(binding, StubUtil.GetEndPointAddress("Adresse/5"));

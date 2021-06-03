@@ -121,6 +121,12 @@ namespace Organisation.IntegrationLayer
                 int statusCode = Int32.Parse(response.RetResponse1.RetOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
+                    if (statusCode == 49)
+                    {
+                        log.Warn("Ret failed on Person " + uuid + " as Organisation returned status 49. The most likely cause is that the object has been Passiveret");
+                        return;
+                    }
+
                     string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", PersonStubHelper.SERVICE, response.RetResponse1.RetOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);

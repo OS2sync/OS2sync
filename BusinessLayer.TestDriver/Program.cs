@@ -14,13 +14,13 @@ namespace Organisation.BusinessLayer.TestDriver
 
         private static void InitEnvironment()
         {
-            System.Environment.SetEnvironmentVariable("ClientCertPath", "c:/cert/sp-test.pfx");
+            System.Environment.SetEnvironmentVariable("ClientCertPath", "z:/dropbox/foces/PocIntegrator.pfx");
             System.Environment.SetEnvironmentVariable("ClientCertPassword", "Test1234");
             System.Environment.SetEnvironmentVariable("Environment", "TEST");
             System.Environment.SetEnvironmentVariable("Municipality", "29189838");
             System.Environment.SetEnvironmentVariable("DisableRevocationCheck", "true");
             System.Environment.SetEnvironmentVariable("LogLevel", "INFO");
-            //System.Environment.SetEnvironmentVariable("LogRequestResponse", "true");
+            System.Environment.SetEnvironmentVariable("LogRequestResponse", "true");
 
             Initializer.Init();
 
@@ -33,19 +33,36 @@ namespace Organisation.BusinessLayer.TestDriver
         {
             InitEnvironment();
 
-            /* ordinary tests */
+            OrgUnitRegistration registration = OUReg();
+            registration.Name = "Testenhed til Opgaver";
+            registration.ParentOrgUnitUuid = Uuid();
+            registration.Tasks = new List<string>();
+            registration.Tasks.Add("407a84c9-5347-4871-9842-fa7a5f8fe607");
+            registration.Tasks.Add("dbb1b318-3c85-11e3-9b13-0050c2490048");
+            registration.Tasks.Add("1b72daba-5e77-4512-a92e-5e4ca9950a35");
+            orgUnitService.Update(registration);
+
+            var ou = inspectorService.ReadOUObject(registration.Uuid);
+
+            registration.Name = "Navneændring";
+            orgUnitService.Update(registration);
+
+            ou = inspectorService.ReadOUObject(registration.Uuid);
+
+            /* ordinary tests
             TestListAndReadOUs();
             TestListAndReadUsers();
             TestCreateAndUpdateFullUser();
-            TestCreateAndUpdateFullOU();
             TestCreateDeleteUpdateUser();
             TestCreateDeleteUpdateOU();
+            TestCreateAndUpdateFullOU();
             TestUpdateWithoutChanges();
             TestPayoutUnits();
             TestPositions();
 //            TestContactPlaces();
             TestUpdateAndSearch();
             TestMultipleAddresses();
+            */
 
             System.Environment.Exit(0);
         }

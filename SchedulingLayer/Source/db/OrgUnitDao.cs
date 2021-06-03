@@ -51,6 +51,7 @@ namespace Organisation.SchedulingLayer
                             command.Parameters.Add(DaoUtil.GetParameter("@location", (object)ou.Location ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@ean", (object)ou.Ean ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@contact_open_hours", (object)ou.ContactOpenHours ?? DBNull.Value));
+                            command.Parameters.Add(DaoUtil.GetParameter("@dtr_id", (object)ou.DtrId ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@email_remarks", (object)ou.EmailRemarks ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@contact", (object)ou.Contact ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@post_return", (object)ou.PostReturn ?? DBNull.Value));
@@ -105,7 +106,6 @@ namespace Organisation.SchedulingLayer
         public List<OrgUnitRegistrationExtended> Get4OldestEntries()
         {
             List<OrgUnitRegistrationExtended> result = new List<OrgUnitRegistrationExtended>();
-            long orgUnitId = 0;
 
             using (DbConnection connection = DaoUtil.GetConnection())
             {
@@ -117,7 +117,7 @@ namespace Organisation.SchedulingLayer
                     {
                         while (reader.Read())
                         {
-                            orgUnitId = (long)reader["id"];
+                            long orgUnitId = (long)reader["id"];
 
                             var orgUnit = new OrgUnitRegistrationExtended();
                             orgUnit.Id = orgUnitId;
@@ -137,6 +137,7 @@ namespace Organisation.SchedulingLayer
                             orgUnit.Ean = GetValue(reader, "ean");
                             orgUnit.Post = GetValue(reader, "post_address");
                             orgUnit.ContactOpenHours = GetValue(reader, "contact_open_hours");
+                            orgUnit.DtrId = GetValue(reader, "dtr_id");
                             orgUnit.EmailRemarks = GetValue(reader, "email_remarks");
                             orgUnit.Contact = GetValue(reader, "contact");
                             orgUnit.PostReturn = GetValue(reader, "post_return");
@@ -165,7 +166,7 @@ namespace Organisation.SchedulingLayer
 
                     using (DbCommand command = DaoUtil.GetCommand(OrgUnitStatements.SelectTasks, connection))
                     {
-                        command.Parameters.Add(DaoUtil.GetParameter("@id", orgUnitId));
+                        command.Parameters.Add(DaoUtil.GetParameter("@id", orgUnit.Id));
 
                         using (DbDataReader reader = command.ExecuteReader())
                         {
@@ -180,7 +181,7 @@ namespace Organisation.SchedulingLayer
 
                     using (DbCommand command = DaoUtil.GetCommand(OrgUnitStatements.SelectContactForTasks, connection))
                     {
-                        command.Parameters.Add(DaoUtil.GetParameter("@id", orgUnitId));
+                        command.Parameters.Add(DaoUtil.GetParameter("@id", orgUnit.Id));
 
                         using (DbDataReader reader = command.ExecuteReader())
                         {
@@ -192,7 +193,6 @@ namespace Organisation.SchedulingLayer
                             }
                         }
                     }
-
                 }
             }
 

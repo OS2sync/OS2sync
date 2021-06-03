@@ -41,6 +41,18 @@ namespace Organisation.BusinessLayer
             return XmlUtil.SerializeObject(registration);
         }
 
+        public void LoadPositions(List<OU> ous, List<FiltreretOejebliksbilledeType> allUnitRoles)
+        {
+            foreach (var ou in ous)
+            {
+                List<Position> positions = new List<Position>();
+
+                ReadPositionsHandler(ou.Uuid, positions, null, allUnitRoles);
+
+                ou.Positions = positions;
+            }
+        }
+
         public string ReadFunctionRaw(string uuid)
         {
             var registration = orgFunctionStub.GetLatestRegistration(uuid);
@@ -1229,6 +1241,13 @@ namespace Organisation.BusinessLayer
                                 Uuid = addressUuid
                             });
                         }
+                        else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_DTR_ID))
+                        {
+                            addresses.Add(new DtrId()
+                            {
+                                Uuid = addressUuid
+                            });
+                        }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_EMAIL_REMARKS))
                         {
                             addresses.Add(new EmailRemarks()
@@ -1352,64 +1371,7 @@ namespace Organisation.BusinessLayer
                 List<Position> positions = new List<Position>();
                 if (readPositions.Equals(ReadPositions.YES))
                 {
-                    var unitRoles = ServiceHelper.FindUnitRolesForOrgUnitAsObjects(uuid);
-
-                    lock (allUnitRolesLock)
-                    {
-                        if (allUnitRoles != null)
-                        {
-                            allUnitRoles.AddRange(unitRoles);
-                        }
-                    }
-
-                    foreach (var unitRole in unitRoles)
-                    {
-                        RegistreringType1 orgFunctionRegistration = null;
-                        if (unitRole.Registrering != null && unitRole.Registrering.Length > 0)
-                        {
-                            orgFunctionRegistration = unitRole.Registrering[0];
-                        }
-
-                        string orgFunctionName = "OrgFunction object does not exist in Organisation";
-                        string orgFunctionShortKey = "OrgFunction object does not exist in Organisation";
-
-                        if (orgFunctionRegistration != null)
-                        {
-                            var orgFunctionProperty = StubUtil.GetLatestProperty(orgFunctionRegistration.AttributListe.Egenskab);
-
-                            if (orgFunctionProperty != null)
-                            {
-                                orgFunctionName = orgFunctionProperty.FunktionNavn;
-                                orgFunctionShortKey = orgFunctionProperty.BrugervendtNoegleTekst;
-                            }
-
-                            if (orgFunctionRegistration.RelationListe.TilknyttedeBrugere != null && orgFunctionRegistration.RelationListe.TilknyttedeBrugere.Length > 0)
-                            {
-                                // the registration pattern allows for multiple users to share an OrgFunction
-                                foreach (var bruger in orgFunctionRegistration.RelationListe.TilknyttedeBrugere)
-                                {
-                                    UserReference user = new UserReference()
-                                    {
-                                        Uuid = bruger.ReferenceID.Item
-                                    };
-
-                                    Position position = new Position()
-                                    {
-                                        Name = orgFunctionName,
-                                        User = user,
-                                        ShortKey = orgFunctionShortKey,
-                                        Uuid = unitRole.ObjektType.UUIDIdentifikator
-                                    };
-
-                                    positions.Add(position);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            errors.Add("OrganisationFunktion does not contain any registrations: " + unitRole.ObjektType.UUIDIdentifikator);
-                        }
-                    }
+                    ReadPositionsHandler(uuid, positions, errors, allUnitRoles);
                 }
 
                 OrgUnitType orgUnitType = OrgUnitType.DEPARTMENT;
@@ -1519,6 +1481,71 @@ namespace Organisation.BusinessLayer
             }
 
             return result;
+        }
+
+        private void ReadPositionsHandler(string uuid, List<Position> positions, List<string> errors, List<FiltreretOejebliksbilledeType> allUnitRoles)
+        {
+            var unitRoles = ServiceHelper.FindUnitRolesForOrgUnitAsObjects(uuid);
+
+            lock (allUnitRolesLock)
+            {
+                if (allUnitRoles != null)
+                {
+                    allUnitRoles.AddRange(unitRoles);
+                }
+            }
+
+            foreach (var unitRole in unitRoles)
+            {
+                RegistreringType1 orgFunctionRegistration = null;
+                if (unitRole.Registrering != null && unitRole.Registrering.Length > 0)
+                {
+                    orgFunctionRegistration = unitRole.Registrering[0];
+                }
+
+                string orgFunctionName = "OrgFunction object does not exist in Organisation";
+                string orgFunctionShortKey = "OrgFunction object does not exist in Organisation";
+
+                if (orgFunctionRegistration != null)
+                {
+                    var orgFunctionProperty = StubUtil.GetLatestProperty(orgFunctionRegistration.AttributListe.Egenskab);
+
+                    if (orgFunctionProperty != null)
+                    {
+                        orgFunctionName = orgFunctionProperty.FunktionNavn;
+                        orgFunctionShortKey = orgFunctionProperty.BrugervendtNoegleTekst;
+                    }
+
+                    if (orgFunctionRegistration.RelationListe.TilknyttedeBrugere != null && orgFunctionRegistration.RelationListe.TilknyttedeBrugere.Length > 0)
+                    {
+                        // the registration pattern allows for multiple users to share an OrgFunction
+                        foreach (var bruger in orgFunctionRegistration.RelationListe.TilknyttedeBrugere)
+                        {
+                            UserReference user = new UserReference()
+                            {
+                                Uuid = bruger.ReferenceID.Item
+                            };
+
+                            Position position = new Position()
+                            {
+                                Name = orgFunctionName,
+                                User = user,
+                                ShortKey = orgFunctionShortKey,
+                                Uuid = unitRole.ObjektType.UUIDIdentifikator
+                            };
+
+                            positions.Add(position);
+                        }
+                    }
+                }
+                else
+                {
+                    if (errors != null)
+                    {
+                        errors.Add("OrganisationFunktion does not contain any registrations: " + unitRole.ObjektType.UUIDIdentifikator);
+                    }
+                }
+            }
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

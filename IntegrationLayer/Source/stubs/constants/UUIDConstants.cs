@@ -24,6 +24,7 @@
         public const string ADDRESS_ROLE_ORGUNIT_LOCATION = "ec387d90-263c-4cce-8de2-63b407a0daac";
         public const string ADDRESS_ROLE_ORGUNIT_PHONE_OPEN_HOURS = "f6fd6117-c718-4254-a6f5-92538ad5a2f4";
         public const string ADDRESS_ROLE_ORGUNIT_CONTACT_ADDRESS_OPEN_HOURS = "f37e5877-1549-4b5d-a53b-819491f0b933";
+        public const string ADDRESS_ROLE_ORGUNIT_DTR_ID = "81912344-ef86-4cff-a522-a0001607d2ce";
 
         public const string ADDRESS_ROLE_USER_EMAIL = "5d13e891-162a-456b-abf2-fd9b864df96d";
         public const string ADDRESS_ROLE_USER_PHONE = "5ef6be2d-59f4-4652-a680-585929924ba9";

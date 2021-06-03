@@ -2,23 +2,13 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <ExcludeFoldersFromDeployment>bin\ar;bin\cs;bin\de;bin\es;bin\fr;bin\he;bin\hi;bin\it;bin\ja;bin\ko;bin\nl;bin\pl;bin\pt;bin\ru;bin\tr-TR;bin\zh-Hans;bin\zh-Hant</ExcludeFoldersFromDeployment>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="log4net" Version="2.0.8" />
-
-<!-- at some point, figure out all the deps we need, and replace the "All" dependency below with those
-    <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.2.0" />
-
-    <PackageReference Include="Microsoft.AspNetCore.App"/>
-    <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.2.0" PrivateAssets="All" />
--->
-    <PackageReference Include="Microsoft.AspNetCore.All" />
-
+    <PackageReference Include="log4net" Version="2.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.2.7" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
     <PackageReference Include="Quartz" Version="3.0.7" />
     <PackageReference Include="System.Private.ServiceModel" Version="4.6.0" /> <!-- needed to fix issue with WCF: https://github.com/dotnet/wcf/issues/2824 -->

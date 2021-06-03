@@ -51,7 +51,10 @@ namespace Organisation.BusinessLayer
                 UpdateOrganisationObject(orgUnitData);
 
                 // ensure "henvendelsessted" tasks are created
-                ServiceHelper.UpdateContactForTasks(registration.Uuid, registration.ContactForTasks, registration.Timestamp);
+                if (!OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder)
+                {
+                    ServiceHelper.UpdateContactForTasks(registration.Uuid, registration.ContactForTasks, registration.Timestamp);
+                }
 
                 log.Debug("Create successful on OrgUnit '" + registration.Uuid + "'");
             }
@@ -132,7 +135,10 @@ namespace Organisation.BusinessLayer
                     organisationEnhedStub.Ret(orgUnitData);
 
                     // ensure "henvendelsessted" tasks are updated
-                    ServiceHelper.UpdateContactForTasks(registration.Uuid, registration.ContactForTasks, registration.Timestamp);
+                    if (!OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder)
+                    {
+                        ServiceHelper.UpdateContactForTasks(registration.Uuid, registration.ContactForTasks, registration.Timestamp);
+                    }
 
                     UpdateOrganisationObject(orgUnitData);
 
@@ -149,7 +155,7 @@ namespace Organisation.BusinessLayer
         private List<AddressRelation> UpdateAddresses(OrgUnitRegistration registration, global::IntegrationLayer.OrganisationEnhed.RegistreringType1 result)
         {
             // check what already exists in Organisation - and store the UUIDs of the existing addresses, we will need those later
-            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null, orgLOSShortNameUuid = null, orgEanUuid = null, orgContactHoursUuid = null, orgPhoneHoursUuid = null, orgPostUuid = null, orgPostReturnUuid = null, orgContactUuid = null, orgEmailRemarksUuid = null, orgLandlineUuid = null, orgUrlUuid = null, orgLosIdUuid = null;
+            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null, orgDtrIdUuid = null, orgLOSShortNameUuid = null, orgEanUuid = null, orgContactHoursUuid = null, orgPhoneHoursUuid = null, orgPostUuid = null, orgPostReturnUuid = null, orgContactUuid = null, orgEmailRemarksUuid = null, orgLandlineUuid = null, orgUrlUuid = null, orgLosIdUuid = null;
 
             if (result.RelationListe.Adresser != null)
             {
@@ -199,6 +205,10 @@ namespace Organisation.BusinessLayer
                     {
                         orgContactHoursUuid = orgAddress.ReferenceID.Item;
                     }
+                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_DTR_ID))
+                    {
+                        orgDtrIdUuid = orgAddress.ReferenceID.Item;
+                    }
                     else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_POST_RETURN))
                     {
                         orgPostReturnUuid = orgAddress.ReferenceID.Item;
@@ -245,6 +255,16 @@ namespace Organisation.BusinessLayer
                 {
                     Uuid = uuid,
                     Type = AddressRelationType.LOCATION
+                });
+            }
+
+            ServiceHelper.UpdateAddress(registration.DtrId, orgDtrIdUuid, registration.Timestamp, out uuid);
+            if (uuid != null)
+            {
+                addressRefs.Add(new AddressRelation()
+                {
+                    Uuid = uuid,
+                    Type = AddressRelationType.DTR_ID
                 });
             }
 
@@ -497,6 +517,19 @@ namespace Organisation.BusinessLayer
                 }
             }
 
+            if (!string.IsNullOrEmpty(registration.DtrId))
+            {
+                ServiceHelper.ImportAddress(registration.DtrId, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.DTR_ID
+                    });
+                }
+            }
+
             if (!string.IsNullOrEmpty(registration.Ean))
             {
                 ServiceHelper.ImportAddress(registration.Ean, registration.Timestamp, out uuid);
@@ -643,6 +676,10 @@ namespace Organisation.BusinessLayer
                     {
                         registration.ContactOpenHours = address.Value;
                     }
+                    else if (address is DTO.Read.DtrId)
+                    {
+                        registration.DtrId = address.Value;
+                    }
                     else if (address is DTO.Read.Url)
                     {
                         registration.Url = address.Value;
@@ -725,6 +762,16 @@ namespace Organisation.BusinessLayer
             if (errors.Count > 0)
             {
                 throw new InvalidFieldsException("Invalid registration object - the following fields are invalid: " + string.Join(",", errors));
+            }
+
+            if (OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder)
+            {
+                registration.ContactForTasks = new List<string>();
+            }
+
+            if (OrganisationRegistryProperties.GetInstance().DisableUdbetalingsenheder)
+            {
+                registration.PayoutUnitUuid = null;
             }
 
             registration.Uuid = registration.Uuid.ToLower();

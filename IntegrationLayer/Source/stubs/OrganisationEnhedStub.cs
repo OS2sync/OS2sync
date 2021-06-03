@@ -34,7 +34,13 @@ namespace Organisation.IntegrationLayer
             helper.AddAddressReferences(unit.Addresses, virkning, registration);
             helper.AddOrganisationRelation(StubUtil.GetMunicipalityOrganisationUUID(), virkning, registration);
             helper.AddOverordnetEnhed(unit.ParentOrgUnitUuid, virkning, registration);
-            helper.AddTilknyttedeFunktioner(unit.OrgFunctionUuids, virkning, registration);
+
+            // TODO: if we ever have other functions for OrgUnits than payout units, this solution will not work
+            if (!registry.DisableUdbetalingsenheder)
+            {
+                helper.AddTilknyttedeFunktioner(unit.OrgFunctionUuids, virkning, registration);
+            }
+
             helper.AddOpgaver(unit.Tasks, virkning, registration);
 
             // set Tilstand to Active
@@ -171,6 +177,9 @@ namespace Organisation.IntegrationLayer
                                     case AddressRelationType.CONTACT_ADDRESS_OPEN_HOURS:
                                         roleUuid = UUIDConstants.ADDRESS_ROLE_ORGUNIT_CONTACT_ADDRESS_OPEN_HOURS;
                                         break;
+                                    case AddressRelationType.DTR_ID:
+                                        roleUuid = UUIDConstants.ADDRESS_ROLE_ORGUNIT_DTR_ID;
+                                        break;
                                     case AddressRelationType.URL:
                                         roleUuid = UUIDConstants.ADDRESS_ROLE_ORGUNIT_URL;
                                         break;
@@ -287,38 +296,43 @@ namespace Organisation.IntegrationLayer
                 }
                 #endregion
 
-                #region Update function references (PayoutUnits and ContactPlaces)
-                // terminate the Virkning on all functions (currently there is only one, the payout unit, but this will work for all kinds of functions)
-                changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.TilknyttedeFunktioner, unit.OrgFunctionUuids, unit.Timestamp, false) || changes;
-
-                // add references to function objects that are new
-                List<string> functionUuidsToAdd = StubUtil.FindAllObjectsInLocalNotInOrg(input.RelationListe.TilknyttedeFunktioner, unit.OrgFunctionUuids, false);
-
-                if (functionUuidsToAdd.Count > 0)
+                #region Update function references (PayoutUnits)
+                // TODO: if we ever have other functions for OrgUnits than payout units, this solution will not work
+                if (!registry.DisableUdbetalingsenheder)
                 {
-                    int size = functionUuidsToAdd.Count + ((input.RelationListe.TilknyttedeFunktioner != null) ? input.RelationListe.TilknyttedeFunktioner.Length : 0);
-                    OrganisationFunktionFlerRelationType[] newFunctions = new OrganisationFunktionFlerRelationType[size];
 
-                    int i = 0;
-                    if (input.RelationListe.TilknyttedeFunktioner != null)
+                    // terminate the Virkning on all functions (currently there is only one, the payout unit, but this will work for all kinds of functions)
+                    changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.TilknyttedeFunktioner, unit.OrgFunctionUuids, unit.Timestamp, false) || changes;
+
+                    // add references to function objects that are new
+                    List<string> functionUuidsToAdd = StubUtil.FindAllObjectsInLocalNotInOrg(input.RelationListe.TilknyttedeFunktioner, unit.OrgFunctionUuids, false);
+
+                    if (functionUuidsToAdd.Count > 0)
                     {
-                        foreach (var functionsInOrg in input.RelationListe.TilknyttedeFunktioner)
+                        int size = functionUuidsToAdd.Count + ((input.RelationListe.TilknyttedeFunktioner != null) ? input.RelationListe.TilknyttedeFunktioner.Length : 0);
+                        OrganisationFunktionFlerRelationType[] newFunctions = new OrganisationFunktionFlerRelationType[size];
+
+                        int i = 0;
+                        if (input.RelationListe.TilknyttedeFunktioner != null)
                         {
-                            newFunctions[i++] = functionsInOrg;
+                            foreach (var functionsInOrg in input.RelationListe.TilknyttedeFunktioner)
+                            {
+                                newFunctions[i++] = functionsInOrg;
+                            }
                         }
+
+                        foreach (string uuidToAdd in functionUuidsToAdd)
+                        {
+                            OrganisationFunktionFlerRelationType newFunction = new OrganisationFunktionFlerRelationType();
+                            newFunction.ReferenceID = StubUtil.GetReference<UnikIdType>(uuidToAdd, ItemChoiceType.UUIDIdentifikator);
+                            newFunction.Virkning = virkning;
+
+                            newFunctions[i++] = newFunction;
+                        }
+
+                        input.RelationListe.TilknyttedeFunktioner = newFunctions;
+                        changes = true;
                     }
-
-                    foreach (string uuidToAdd in functionUuidsToAdd)
-                    {
-                        OrganisationFunktionFlerRelationType newFunction = new OrganisationFunktionFlerRelationType();
-                        newFunction.ReferenceID = StubUtil.GetReference<UnikIdType>(uuidToAdd, ItemChoiceType.UUIDIdentifikator);
-                        newFunction.Virkning = virkning;
-
-                        newFunctions[i++] = newFunction;
-                    }
-
-                    input.RelationListe.TilknyttedeFunktioner = newFunctions;
-                    changes = true;
                 }
                 #endregion
 
@@ -348,6 +362,12 @@ namespace Organisation.IntegrationLayer
                 int statusCode = Int32.Parse(response.RetResponse1.RetOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
+                    if (statusCode == 49)
+                    {
+                        log.Warn("Ret failed on OrgUnit " + unit.Uuid + " as Organisation returned status 49. The most likely cause is that the object has been Passiveret");
+                        return;
+                    }
+
                     string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", OrganisationEnhedStubHelper.SERVICE, response.RetResponse1.RetOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
@@ -488,6 +508,12 @@ namespace Organisation.IntegrationLayer
                 int statusCode = Int32.Parse(response.RetResponse1.RetOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
+                    if (statusCode == 49)
+                    {
+                        log.Warn("Deactive failed on OrgUnit " + uuid + " as Organisation returned status 49. The most likely cause is that the object has been Passiveret");
+                        return;
+                    }
+
                     string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", OrganisationEnhedStubHelper.SERVICE, response.RetResponse1.RetOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
