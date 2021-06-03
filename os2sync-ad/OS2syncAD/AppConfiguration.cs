@@ -58,6 +58,14 @@ namespace OS2syncAD
             }
         }
 
+        public static string OUAttributeDtrId
+        {
+            get
+            {
+                return configuration["AD:OrgUnitAttributes:DtrId"];
+            }
+        }
+
         public static string OUAttributeEmail
         {
             get

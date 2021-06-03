@@ -135,12 +135,14 @@ namespace OS2syncAD
 
                 attributes.Add(AppConfiguration.OUAttributeFiltered);
                 attributes.Add(AppConfiguration.OUAttributeEan);
+                attributes.Add(AppConfiguration.OUAttributeDtrId);
                 attributes.Add(AppConfiguration.OUAttributeEmail);
                 attributes.Add(AppConfiguration.OUAttributeLocation);
                 attributes.Add(AppConfiguration.OUAttributeLOSShortName);
                 attributes.Add(AppConfiguration.OUAttributeName);
                 attributes.Add(AppConfiguration.OUAttributePayoutUnitUUID);
                 attributes.Add(AppConfiguration.OUAttributePhone);
+                attributes.Add(AppConfiguration.OUAttributeLOSId);
                 attributes.Add(AppConfiguration.OUAttributePost);
                 attributes.Add(AppConfiguration.UserAttributeLocation);
                 attributes.Add(AppConfiguration.UserAttributeMail);
@@ -148,6 +150,7 @@ namespace OS2syncAD
                 attributes.Add(AppConfiguration.UserAttributePersonName);
                 attributes.Add(AppConfiguration.UserAttributePhone);
                 attributes.Add(AppConfiguration.UserAttributePositionName);
+                attributes.Add(AppConfiguration.UserAttributeRacfID);
 
                 attributes.Remove(null);
                 attributes.Remove("");

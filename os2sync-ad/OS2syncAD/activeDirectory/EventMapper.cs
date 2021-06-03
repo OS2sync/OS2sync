@@ -99,6 +99,11 @@ namespace OS2syncAD
                     orgUnit.Ean = getSingleAttribute(anEvent, AppConfiguration.OUAttributeEan);
                 }
 
+                if (!string.IsNullOrEmpty(AppConfiguration.OUAttributeDtrId) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributeDtrId))
+                {
+                    orgUnit.DtrId = getSingleAttribute(anEvent, AppConfiguration.OUAttributeDtrId);
+                }
+
                 if (!string.IsNullOrEmpty(AppConfiguration.OUAttributeEmail) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributeEmail))
                 {
                     orgUnit.Email = getSingleAttribute(anEvent, AppConfiguration.OUAttributeEmail);

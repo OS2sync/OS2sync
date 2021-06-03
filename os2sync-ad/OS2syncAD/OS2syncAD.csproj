@@ -2,19 +2,20 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <StartupObject>OS2syncAD.Program</StartupObject>
     <ApplicationIcon />
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Evolve" Version="2.2.0" />
-    <PackageReference Include="log4net" Version="2.0.8" />
+    <PackageReference Include="Evolve" Version="2.4.0" />
+    <PackageReference Include="log4net" Version="2.0.12" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="3.1.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.2" />
-    <PackageReference Include="MySqlConnector" Version="0.62.0" />
+    <PackageReference Include="MySqlConnector" Version="1.2.1" />
     <PackageReference Include="Quartz" Version="3.0.7" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
     <PackageReference Include="System.DirectoryServices" Version="4.7.0" />
     <PackageReference Include="System.Private.ServiceModel" Version="4.7.0" />
     <PackageReference Include="System.ServiceModel.Duplex" Version="4.3.0" />
@@ -27,13 +28,13 @@
 
   <ItemGroup>
     <Reference Include="BusinessLayer">
-      <HintPath>\\vboxsvr\brian\projects\os2sync-ad\References\OS2sync\BusinessLayer.dll</HintPath>
+      <HintPath>\\vboxsvr\brian\projects\os2sync-organisation-ad\References\OS2sync\BusinessLayer.dll</HintPath>
     </Reference>
     <Reference Include="IntegrationLayer">
-      <HintPath>\\vboxsvr\brian\projects\os2sync-ad\References\OS2sync\IntegrationLayer.dll</HintPath>
+      <HintPath>\\vboxsvr\brian\projects\os2sync-organisation-ad\References\OS2sync\IntegrationLayer.dll</HintPath>
     </Reference>
     <Reference Include="SchedulingLayer">
-      <HintPath>\\vboxsvr\brian\projects\os2sync-ad\References\OS2sync\SchedulingLayer.dll</HintPath>
+      <HintPath>\\vboxsvr\brian\projects\os2sync-organisation-ad\References\OS2sync\SchedulingLayer.dll</HintPath>
     </Reference>
   </ItemGroup>
 
@@ -51,6 +52,15 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="mssql\V1_2_0_0__AD.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="mssql\V1_3_0_0__Add_new_kmd_addresses.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="mssql\V1_3_0_1__Fix_error_table.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="mssql\V1_3_0_2__Add_new_dtr_address.sql">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
