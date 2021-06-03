@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <PackageReference Include="Evolve" Version="2.2.0" />
-    <PackageReference Include="log4net" Version="2.0.8" />
+    <PackageReference Include="log4net" Version="2.0.10" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.0.0" />
     <PackageReference Include="MySqlConnector" Version="0.31.0" />
     <PackageReference Include="Quartz" Version="3.0.7" />

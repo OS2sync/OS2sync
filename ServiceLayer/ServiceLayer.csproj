@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="log4net" Version="2.0.8" />
+    <PackageReference Include="log4net" Version="2.0.10" />
 
 <!-- at some point, figure out all the deps we need, and replace the "All" dependency below with those
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
