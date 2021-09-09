@@ -33,12 +33,23 @@ namespace Organisation.IntegrationLayer
             return new Uri(registryProperties.ServicesBaseUrl + suffix);
         }
 
-        public static bool TerminateVirkning(dynamic virkning, DateTime timestamp)
+        public static bool TerminateVirkning(dynamic virkning, DateTime timestamp, bool force = false)
         {
+            // make sure TilTidspunkt is always at least FraTidspunkt
+            object from = virkning.FraTidspunkt.Item;
+            if (from is DateTime)
+            {
+                DateTime fromDT = (DateTime)from;
+                if (DateTime.Compare(fromDT, timestamp) > 0)
+                {
+                    timestamp = fromDT;
+                }
+            }
+
             DateTime endTime = timestamp.Date + new TimeSpan(0, 0, 0);
 
             object current = virkning.TilTidspunkt.Item;
-            if (current == null || !(current is DateTime) || (current is DateTime && DateTime.Compare((DateTime) current, endTime) > 0))
+            if (force || current == null || !(current is DateTime) || (current is DateTime && DateTime.Compare((DateTime) current, endTime) > 0))
             {
                 virkning.TilTidspunkt.Item = endTime;
                 return true;

@@ -118,18 +118,22 @@ namespace Organisation.SchedulingLayer
             INSERT INTO queue_user_positions (
                 user_id,
                 name,
-                orgunit_uuid
+                orgunit_uuid,
+                start_date,
+                stop_date
             )
             VALUES (
                 @user_id,
                 @name,
-                @orgunit_uuid
+                @orgunit_uuid,
+                @start_date,
+                @stop_date
             )";
 
         private const string SELECT_MYSQL = @"SELECT * FROM queue_users ORDER BY timestamp LIMIT 4";
         private const string SELECT_MSSQL = @"SELECT TOP(4) * FROM queue_users ORDER BY timestamp";
 
-        private const string SELECT_POSITIONS = @"SELECT name, orgunit_uuid FROM queue_user_positions WHERE user_id = @id";
+        private const string SELECT_POSITIONS = @"SELECT name, orgunit_uuid, start_date, stop_date FROM queue_user_positions WHERE user_id = @id";
 
         private const string DELETE = @"DELETE FROM queue_users WHERE id = @id";
 

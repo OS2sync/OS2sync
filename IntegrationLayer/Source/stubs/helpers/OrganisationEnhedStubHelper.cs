@@ -38,9 +38,19 @@ namespace Organisation.IntegrationLayer
 
         internal bool UpdateOpgaver(List<string> opgaver, VirkningType virkning, RegistreringType1 registration, DateTime timestamp)
         {
-            if (registryProperties.DisableKleOpgaver)
+            if (registryProperties.DisableKleOpgaver.Count > 0)
             {
-                return false;
+                // true is global, disabled for all
+                if (registryProperties.DisableKleOpgaver.Contains("true"))
+                {
+                    return false;
+                }
+
+                // check for CVR of current municipality
+                if (registryProperties.DisableKleOpgaver.Contains(OrganisationRegistryProperties.GetCurrentMunicipality()))
+                {
+                    return true;
+                }
             }
 
             bool changes = false;

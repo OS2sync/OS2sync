@@ -57,6 +57,8 @@ namespace Organisation.SchedulingLayer
                                 command.Parameters.Add(DaoUtil.GetParameter("@user_id", user_id));
                                 command.Parameters.Add(DaoUtil.GetParameter("@name", position.Name));
                                 command.Parameters.Add(DaoUtil.GetParameter("@orgunit_uuid", position.OrgUnitUuid));
+                                command.Parameters.Add(DaoUtil.GetParameter("@start_date", position.StartDate));
+                                command.Parameters.Add(DaoUtil.GetParameter("@stop_date", position.StopDate));
                                 command.ExecuteNonQuery();
                             }
                         }
@@ -125,6 +127,8 @@ namespace Organisation.SchedulingLayer
                                 Position position = new Position();
                                 position.OrgUnitUuid = GetValue(reader, "orgunit_uuid");
                                 position.Name = GetValue(reader, "name");
+                                position.StartDate = GetValue(reader, "start_date");
+                                position.StopDate = GetValue(reader, "stop_date");
 
                                 user.Positions.Add(position);
                             }

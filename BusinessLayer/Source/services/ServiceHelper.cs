@@ -170,15 +170,13 @@ namespace Organisation.BusinessLayer
                1. fetch all positions that the user currently have
                2. compare positions from organisation with the positions in the registration, using the following rules
                   a) a position is a "match" if it points to the same unit (yes, this is an issue for the users with multiple positions in the same OU, luckily those are few)
-                  b) a position should be updated if the name/ou-pointer has been changed
+                  b) a position should be updated if the name/ou-pointer has been changed, or if the start/stop dates has been modified
                   c) a position should be removed if it no longer exist in the registration, but does in organisation
                   d) a position should be added, if it exists in the registration, but not in organisation
              */
 
             // fetch all the users existing positions
             List<FiltreretOejebliksbilledeType> unitRoles = FindUnitRolesForUser(user.Uuid);
-
-            List<Position> copyOfUserPositions = new List<Position>(user.Positions);
 
             // loop through roles found in organisation, and find those that must be updated, and those that must be deleted
             foreach (FiltreretOejebliksbilledeType unitRole in unitRoles)
@@ -199,14 +197,28 @@ namespace Organisation.BusinessLayer
                 string existingRoleShortKey = latestProperty.BrugervendtNoegleTekst;
 
                 bool found = false;
-                for (int i = copyOfUserPositions.Count - 1; i >= 0; i--)
+                foreach (Position position in user.Positions)
                 {
-                    Position position = copyOfUserPositions[i];
-
-                    if (existingRoleOUUuid.Equals(position.OrgUnitUuid))
+                    // a change of title will effectively create a new position, as we do not have a unique key besides these values
+                    if (string.Equals(existingRoleOUUuid, position.OrgUnitUuid) && string.Equals(existingRoleName, position.Name))
                     {
+                        // if there are changes to the dates, we consider it a new position even though OU/Title is identical. This allows
+                        // us to have multiple affiliations of the same OU/Title setup but with different start/stop dates, and it also avoids
+                        // data issues with keeping historical changes on the same OrgFun object (which our other code does not like)
+                        if (DetectDateChanges(position, existingRoleRegistration.RelationListe.TilknyttedeEnheder[0].Virkning))
+                        {
+                            continue;
+                        }
+
+                        bool changes = false;
+
                         // update if needed
-                        if (string.Compare(existingRoleName, position.Name) != 0)
+                        if (!string.Equals(existingRoleName, position.Name))
+                        {
+                            changes = true;
+                        }
+
+                        if (changes)
                         {
                             organisationFunktionStub.Ret(new OrgFunctionData()
                             {
@@ -216,16 +228,15 @@ namespace Organisation.BusinessLayer
                                 FunctionTypeUuid = UUIDConstants.ORGFUN_POSITION,
                                 OrgUnits = new List<string>() { position.OrgUnitUuid },
                                 Users = new List<string>() { user.Uuid },
-                                Timestamp = user.Timestamp
-                            }, UpdateIndicator.NONE, UpdateIndicator.COMPARE, UpdateIndicator.NONE);
+                                Timestamp = user.Timestamp,
+                                StartDate = position.StartDate,
+                                StopDate = position.StopDate
+                            }, UpdateIndicator.NONE, UpdateIndicator.COMPARE, UpdateIndicator.NONE, true);
 
                             // copy value to read data, so we can use it for comparison below when deciding what to create
                             latestProperty.FunktionNavn = position.Name;
                         }
 
-                        // ensure that the updated positions i no longer in the copied list, so multiple positions
-                        // in the same OU, will not hit the same source-position
-                        copyOfUserPositions.RemoveAt(i);
                         found = true;
                         break;
                     }
@@ -233,21 +244,17 @@ namespace Organisation.BusinessLayer
 
                 if (!found)
                 {
-                    organisationFunktionStub.Deactivate(existingRoleUuid, user.Timestamp);
+                    organisationFunktionStub.Deactivate(existingRoleUuid, user.Timestamp, true);
                 }
             }
-
-            // refresh copy of positions
-            var copyOfRemotePositions = new List<FiltreretOejebliksbilledeType>(unitRoles);
 
             // loop through all roles found in the local registration, and create all those that do not exist in Organisation
             foreach (var position in user.Positions)
             {
                 bool found = false;
 
-                for (int i = copyOfRemotePositions.Count - 1; i >= 0; i--)
+                foreach (var unitRole in unitRoles)
                 {
-                    var unitRole = copyOfRemotePositions[i];
                     RegistreringType1 existingRoleRegistration = unitRole.Registrering[0];
 
                     if (existingRoleRegistration.RelationListe.TilknyttedeEnheder.Length != 1)
@@ -256,32 +263,68 @@ namespace Organisation.BusinessLayer
                         continue;
                     }
 
+                    // if there are changes to the dates, we consider it a new position even though OU/Title is identical. This allows
+                    // us to have multiple affiliations of the same OU/Title setup but with different start/stop dates, and it also avoids
+                    // data issues with keeping historical changes on the same OrgFun object (which our other code does not like)
+                    if (DetectDateChanges(position, existingRoleRegistration.RelationListe.TilknyttedeEnheder[0].Virkning))
+                    {
+                        continue;
+                    }
+
                     string existingRoleOUUuid = existingRoleRegistration.RelationListe.TilknyttedeEnheder[0].ReferenceID.Item;
                     string existingFunctionName = existingRoleRegistration.AttributListe.Egenskab[0].FunktionNavn;
 
-                    if (existingRoleOUUuid.Equals(position.OrgUnitUuid) && string.Compare(existingFunctionName, position.Name) == 0)
+                    if (existingRoleOUUuid.Equals(position.OrgUnitUuid) && string.Equals(existingFunctionName, position.Name))
                     {
-                        // to make sure we can add new positions within the same OU as existing positions, we
-                        // remove existing ones, one at a time, so we do not match twice
-                        copyOfRemotePositions.RemoveAt(i);
                         found = true;
                     }
                 }
 
                 if (!found)
                 {
+                    string newUuid = IdUtil.GenerateUuid();
+
                     organisationFunktionStub.Importer(new OrgFunctionData()
                     {
-                        Uuid = IdUtil.GenerateUuid(),
+                        Uuid = newUuid,
                         ShortKey = IdUtil.GenerateShortKey(),
                         Name = position.Name,
                         FunctionTypeUuid = UUIDConstants.ORGFUN_POSITION,
                         OrgUnits = new List<string>() { position.OrgUnitUuid },
                         Users = new List<string>() { user.Uuid },
+                        StartDate = position.StartDate,
+                        StopDate = position.StopDate,
                         Timestamp = user.Timestamp
                     });
                 }
             }
+        }
+
+        private static bool DetectDateChanges(Position position, VirkningType virkning)
+        {
+            bool dateChanges = false;
+
+            if (!string.IsNullOrEmpty(position.StartDate))
+            {
+                string existingRoleStartDate = null, existingRoleStopDate = null;
+
+                if (virkning?.FraTidspunkt?.Item is DateTime)
+                {
+                    existingRoleStartDate = ((DateTime)virkning.FraTidspunkt.Item).ToString("yyyy-MM-dd");
+                }
+
+                if (virkning?.TilTidspunkt?.Item is DateTime)
+                {
+                    existingRoleStopDate = ((DateTime)virkning.TilTidspunkt.Item).ToString("yyyy-MM-dd");
+                }
+
+                if (!string.Equals(position.StartDate, existingRoleStartDate) || !string.Equals(position.StopDate, existingRoleStopDate))
+                {
+                    dateChanges = true;
+                }
+            }
+
+            return dateChanges;
         }
 
         // this method must be synchronized, as we create a function on the first entry into this method, and return the same value on all other calls

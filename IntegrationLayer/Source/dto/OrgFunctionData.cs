@@ -18,6 +18,9 @@ namespace Organisation.IntegrationLayer
         public List<AddressRelation> Addresses { get; set; } = new List<AddressRelation>();
         public DateTime Timestamp { get; set; }
 
+        public string StartDate { get; set; }
+        public string StopDate { get; set; }
+
         private string uuid;
         public string Uuid
         {

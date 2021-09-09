@@ -442,6 +442,8 @@ namespace Organisation.BusinessLayer
                     {
                         string orgFunctionName = "OrgFunction object does not exist in Organisation";
                         string orgFunctionShortKey = "OrgFunction object does not exist in Organisation";
+                        string startDate = null, stopDate = null;
+
                         OUReference ou = new OUReference()
                         {
                             Uuid = null,
@@ -465,6 +467,15 @@ namespace Organisation.BusinessLayer
                                 global::IntegrationLayer.OrganisationFunktion.OrganisationEnhedFlerRelationType parentOu = orgFunctionRegistration.RelationListe.TilknyttedeEnheder[0];
                                 string parentOuUuid = parentOu.ReferenceID.Item;
                                 ou.Uuid = parentOuUuid;
+
+                                if (parentOu.Virkning?.FraTidspunkt?.Item is DateTime)
+                                {
+                                    startDate = ((DateTime)parentOu.Virkning.FraTidspunkt.Item).ToString("yyyy-MM-dd");                                   
+                                }
+                                if (parentOu.Virkning?.TilTidspunkt?.Item is DateTime)
+                                {
+                                    stopDate = ((DateTime)parentOu.Virkning.TilTidspunkt.Item).ToString("yyyy-MM-dd");
+                                }
 
                                 if (readParentDetails.Equals(ReadParentDetails.YES))
                                 {
@@ -490,7 +501,9 @@ namespace Organisation.BusinessLayer
                             Name = orgFunctionName,
                             OU = ou,
                             ShortKey = orgFunctionShortKey,
-                            Uuid = positionUuid
+                            Uuid = positionUuid,
+                            StartDate = startDate,
+                            StopDate = stopDate
                         };
 
                         positions.Add(position);
@@ -842,6 +855,8 @@ namespace Organisation.BusinessLayer
                 {
                     string orgFunctionName = "OrgFunction object does not exist in Organisation";
                     string orgFunctionShortKey = "OrgFunction object does not exist in Organisation";
+                    string startDate = null, stopDate = null;
+
                     OUReference ou = new OUReference()
                     {
                         Uuid = null,
@@ -865,6 +880,16 @@ namespace Organisation.BusinessLayer
                             global::IntegrationLayer.OrganisationFunktion.OrganisationEnhedFlerRelationType parentOu = orgFunctionRegistration.RelationListe.TilknyttedeEnheder[0];
                             string parentOuUuid = parentOu.ReferenceID.Item;
                             ou.Uuid = parentOuUuid;
+
+                            if (parentOu.Virkning?.FraTidspunkt?.Item is DateTime)
+                            {
+                                startDate = ((DateTime)parentOu.Virkning.FraTidspunkt.Item).ToString("yyyy-MM-dd");
+                            }
+
+                            if (parentOu.Virkning?.TilTidspunkt?.Item is DateTime)
+                            {
+                                stopDate = ((DateTime)parentOu.Virkning.TilTidspunkt.Item).ToString("yyyy-MM-dd");
+                            }
 
                             if (readParentDetails.Equals(ReadParentDetails.YES))
                             {
@@ -890,7 +915,9 @@ namespace Organisation.BusinessLayer
                         Name = orgFunctionName,
                         OU = ou,
                         ShortKey = orgFunctionShortKey,
-                        Uuid = positionUuid
+                        Uuid = positionUuid,
+                        StartDate = startDate,
+                        StopDate = stopDate
                     };
 
                     positions.Add(position);

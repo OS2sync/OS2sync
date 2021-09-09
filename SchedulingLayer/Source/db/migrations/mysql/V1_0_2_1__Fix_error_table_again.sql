@@ -1,0 +1,1 @@
+ALTER TABLE failure_orgunits MODIFY error TEXT AFTER dtr_id;

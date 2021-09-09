@@ -11,5 +11,7 @@ namespace Organisation.BusinessLayer.DTO.Read
         public string Name { get; set; }
         public OUReference OU { get; set; }
         public UserReference User { get; set; }
+        public string StartDate { get; set; }
+        public string StopDate { get; set; }
     }
 }

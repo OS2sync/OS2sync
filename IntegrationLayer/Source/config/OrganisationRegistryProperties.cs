@@ -48,7 +48,7 @@ namespace Organisation.IntegrationLayer
         public string DefaultMunicipality { get; set; }
         public Level LogLevel { get; set;} = Level.Info; // default
         public string MigrationScriptsPath { get; set; }
-        public bool DisableKleOpgaver { get; set; }
+        public List<string> DisableKleOpgaver { get; set; }
         public bool DisableHenvendelsessteder { get; set; }
         public bool DisableUdbetalingsenheder { get; set; }
         public bool SslEnabled { get; set; }
@@ -119,7 +119,16 @@ namespace Organisation.IntegrationLayer
             DisableRevocationCheck = "true".Equals(configuration[REVOCATION_CHECK_KEY]);
             DefaultMunicipality = configuration[MUNICIPALITY_KEY];
             EnableScheduler = "true".Equals(configuration[ENABLE_SCHEDULER_KEY]);
-            DisableKleOpgaver = "true".Equals(configuration[DISABLE_KLE_OPGAVER]);
+
+            DisableKleOpgaver = new List<string>();
+            var tmp = configuration[DISABLE_KLE_OPGAVER];
+            if (!string.IsNullOrEmpty(tmp) && !"false".Equals(tmp.ToLower()))
+            {
+                tmp = tmp.ToLower();
+
+                // then it either contains "true" or it contains a list of CVR numbers
+                DisableKleOpgaver.AddRange(tmp.Split(","));
+            }
 
             DisableHenvendelsessteder = "true".Equals(configuration[DISABLE_HENVENDELSESSTEDER]);
             DisableUdbetalingsenheder = "true".Equals(configuration[DISABLE_UDBETALINGSENHEDER]);

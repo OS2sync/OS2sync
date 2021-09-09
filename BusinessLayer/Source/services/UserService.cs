@@ -144,6 +144,8 @@ namespace Organisation.BusinessLayer
                     Position userPosition = new Position();
                     userPosition.Name = position.Name;
                     userPosition.OrgUnitUuid = position.OU.Uuid;
+                    userPosition.StartDate = position.StartDate;
+                    userPosition.StopDate = position.StopDate;
 
                     registration.Positions.Add(userPosition);
                 }

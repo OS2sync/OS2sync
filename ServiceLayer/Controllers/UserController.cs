@@ -1,8 +1,6 @@
-using Organisation.IntegrationLayer;
 using Organisation.BusinessLayer;
 using Organisation.SchedulingLayer;
 using System;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using Organisation.BusinessLayer.DTO.Registration;
 

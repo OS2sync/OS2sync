@@ -1,6 +1,5 @@
 ﻿using IntegrationLayer.OrganisationFunktion;
 using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -24,6 +23,13 @@ namespace Organisation.IntegrationLayer
             // create timestamp object to be used on all registrations, properties and relations
             VirkningType virkning = helper.GetVirkning(orgFunction.Timestamp);
 
+            // for positions, it is possible to supply a custom start/stop date
+            VirkningType unitRelationVirkning = virkning;
+            if (orgFunction.FunctionTypeUuid.Equals(UUIDConstants.ORGFUN_POSITION) && !string.IsNullOrEmpty(orgFunction.StartDate))
+            {
+                unitRelationVirkning = helper.GetVirkning(orgFunction.StartDate, orgFunction.StopDate);
+            }
+
             // setup registration
             RegistreringType1 registration = helper.CreateRegistration(orgFunction.Timestamp, LivscyklusKodeType.Importeret);
 
@@ -31,8 +37,8 @@ namespace Organisation.IntegrationLayer
             helper.AddProperties(orgFunction.ShortKey, orgFunction.Name, virkning, registration);
 
             // add relationships on registration
-            helper.AddTilknyttedeBrugere(orgFunction.Users, virkning, registration);
-            helper.AddTilknyttedeEnheder(orgFunction.OrgUnits, virkning, registration);
+            helper.AddTilknyttedeBrugere(orgFunction.Users, unitRelationVirkning, registration);
+            helper.AddTilknyttedeEnheder(orgFunction.OrgUnits, unitRelationVirkning, registration);
             helper.AddTilknyttedeItSystemer(orgFunction.ItSystems, virkning, registration);
             helper.AddOpgaver(orgFunction.Tasks, virkning, registration);
             helper.AddOrganisationRelation(StubUtil.GetMunicipalityOrganisationUUID(), virkning, registration);
@@ -77,11 +83,11 @@ namespace Organisation.IntegrationLayer
             }
         }
 
-        public void Ret(OrgFunctionData orgFunction, UpdateIndicator userIndicator, UpdateIndicator unitIndicator, UpdateIndicator taskIndicator)
+        public void Ret(OrgFunctionData orgFunction, UpdateIndicator userIndicator, UpdateIndicator unitIndicator, UpdateIndicator taskIndicator, bool futurePositions = false)
         {
             log.Debug("Attempting Ret on OrganisationFunction with uuid " + orgFunction.Uuid);
 
-            RegistreringType1 registration = GetLatestRegistration(orgFunction.Uuid);
+            RegistreringType1 registration = GetLatestRegistration(orgFunction.Uuid, futurePositions);
             if (registration == null)
             {
                 log.Debug("Cannot call Ret on OrganisationFunktion with uuid " + orgFunction.Uuid + " because it does not exist in Organisation");
@@ -175,20 +181,59 @@ namespace Organisation.IntegrationLayer
 
                 #region Update TilknyttedeBrugere relationships
                 // terminate references
-                if (userIndicator.Equals(UpdateIndicator.COMPARE))
+                if (userIndicator.Equals(UpdateIndicator.NONE))
+                {
+                    ; // do nothing
+                }
+                else if (userIndicator.Equals(UpdateIndicator.COMPARE))
                 {
                     // terminate the references in Org that no longer exist locally
                     changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.TilknyttedeBrugere, orgFunction.Users, orgFunction.Timestamp, false) || changes;
-                }
-                else if (userIndicator.Equals(UpdateIndicator.REMOVE))
-                {
-                    changes = TerminateObjectsInOrgThatAreInLocal(input.RelationListe.TilknyttedeBrugere, orgFunction.Users, orgFunction.Timestamp) || changes;
-                }
 
-                if (userIndicator.Equals(UpdateIndicator.COMPARE) || userIndicator.Equals(UpdateIndicator.ADD))
-                {
-                    // get the set of new local objects only
-                    List<string> uuidsToAdd = StubUtil.FindAllObjectsInLocalNotInOrg(input.RelationListe.TilknyttedeBrugere, orgFunction.Users, false);
+                    VirkningType unitRelationVirkning = virkning;
+                    if (orgFunction.FunctionTypeUuid.Equals(UUIDConstants.ORGFUN_POSITION) && !string.IsNullOrEmpty(orgFunction.StartDate))
+                    {
+                        unitRelationVirkning = helper.GetVirkning(orgFunction.StartDate, orgFunction.StopDate);
+                    }
+
+                    List<string> uuidsToAdd = new List<string>();
+                    foreach (string userUuid in orgFunction.Users)
+                    {
+                        bool found = false;
+                        if (input.RelationListe.TilknyttedeBrugere != null)                        {
+                            foreach (var tilknyttetBruger in input.RelationListe.TilknyttedeBrugere)
+                            {
+                                string tilknyttetBrugerUuid = tilknyttetBruger.ReferenceID?.Item;
+                                if (userUuid.Equals(tilknyttetBrugerUuid))
+                                {
+                                    found = true;
+                                    // detect changes in start/stop dates if values are supplied
+                                    if (orgFunction.FunctionTypeUuid.Equals(UUIDConstants.ORGFUN_POSITION) && !string.IsNullOrEmpty(orgFunction.StartDate))
+                                    {
+                                        string existingUnitStartDate = null, existingUnitStopDate = null;
+                                        if (tilknyttetBruger.Virkning?.FraTidspunkt?.Item is DateTime)
+                                        {
+                                            existingUnitStartDate = ((DateTime)tilknyttetBruger.Virkning.FraTidspunkt.Item).ToString("yyyy-MM-dd");
+                                        }
+                                        if (tilknyttetBruger.Virkning?.TilTidspunkt?.Item is DateTime)
+                                        {
+                                            existingUnitStopDate = ((DateTime)tilknyttetBruger.Virkning.TilTidspunkt.Item).ToString("yyyy-MM-dd");
+                                        }
+                                        if (!string.Equals(orgFunction.StartDate, existingUnitStartDate) || !string.Equals(orgFunction.StopDate, existingUnitStopDate))
+                                        {
+                                            tilknyttetBruger.Virkning = unitRelationVirkning;
+                                            changes = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // add this one
+                        if (!found)
+                        {
+                            uuidsToAdd.Add(userUuid);
+                        }
+                    }
 
                     // add all the new references
                     if (uuidsToAdd.Count > 0)
@@ -207,7 +252,7 @@ namespace Organisation.IntegrationLayer
 
                         foreach (string uuidToAdd in uuidsToAdd)
                         {
-                            newUsers[i++] = helper.CreateBrugerRelation(uuidToAdd, virkning);
+                            newUsers[i++] = helper.CreateBrugerRelation(uuidToAdd, unitRelationVirkning);
                         }
 
                         input.RelationListe.TilknyttedeBrugere = newUsers;
@@ -217,21 +262,67 @@ namespace Organisation.IntegrationLayer
                 #endregion
 
                 #region Update TilknyttedeEnheder relationships
-                // terminate references
-                if (unitIndicator.Equals(UpdateIndicator.COMPARE))
+
+                if (unitIndicator.Equals(UpdateIndicator.NONE))
+                {
+                    ; // do nothing
+                }
+                else if (unitIndicator.Equals(UpdateIndicator.COMPARE))
                 {
                     // terminate the references in Org that no longer exist locally
                     changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.TilknyttedeEnheder, orgFunction.OrgUnits, orgFunction.Timestamp, false) || changes;
-                }
-                else if (unitIndicator.Equals(UpdateIndicator.REMOVE))
-                {
-                    changes = TerminateObjectsInOrgThatAreInLocal(input.RelationListe.TilknyttedeEnheder, orgFunction.OrgUnits, orgFunction.Timestamp) || changes;
-                }
 
-                if (unitIndicator.Equals(UpdateIndicator.COMPARE) || unitIndicator.Equals(UpdateIndicator.ADD))
-                {
-                    // get the set of new local objects
-                    List<string> uuidsToAdd = StubUtil.FindAllObjectsInLocalNotInOrg(input.RelationListe.TilknyttedeEnheder, orgFunction.OrgUnits, false);
+                    VirkningType unitRelationVirkning = virkning;
+                    if (orgFunction.FunctionTypeUuid.Equals(UUIDConstants.ORGFUN_POSITION) && !string.IsNullOrEmpty(orgFunction.StartDate))
+                    {
+                        unitRelationVirkning = helper.GetVirkning(orgFunction.StartDate, orgFunction.StopDate);
+                    }
+
+                    // find those to update or add
+                    List<string> uuidsToAdd = new List<string>();
+                    foreach (string ouUuid in orgFunction.OrgUnits)
+                    {
+                        bool found = false;
+
+                        if (input.RelationListe.TilknyttedeEnheder != null)
+                        {
+                            foreach (var tilknyttetEnhed in input.RelationListe.TilknyttedeEnheder)
+                            {
+                                string tilknyttetEnhedUuid = tilknyttetEnhed.ReferenceID?.Item;
+
+                                if (ouUuid.Equals(tilknyttetEnhedUuid))
+                                {
+                                    found = true;
+
+                                    // detect changes in start/stop dates if values are supplied
+                                    if (orgFunction.FunctionTypeUuid.Equals(UUIDConstants.ORGFUN_POSITION) && !string.IsNullOrEmpty(orgFunction.StartDate))
+                                    {
+                                        string existingUnitStartDate = null, existingUnitStopDate = null;
+                                        if (tilknyttetEnhed.Virkning?.FraTidspunkt?.Item is DateTime)
+                                        {
+                                            existingUnitStartDate = ((DateTime)tilknyttetEnhed.Virkning.FraTidspunkt.Item).ToString("yyyy-MM-dd");
+                                        }
+                                        if (tilknyttetEnhed.Virkning?.TilTidspunkt?.Item is DateTime)
+                                        {
+                                            existingUnitStopDate = ((DateTime)tilknyttetEnhed.Virkning.TilTidspunkt.Item).ToString("yyyy-MM-dd");
+                                        }
+
+                                        if (!string.Equals(orgFunction.StartDate, existingUnitStartDate) || !string.Equals(orgFunction.StopDate, existingUnitStopDate))
+                                        {
+                                            tilknyttetEnhed.Virkning = unitRelationVirkning;
+                                            changes = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // add this one
+                        if (!found)
+                        {
+                            uuidsToAdd.Add(ouUuid);
+                        }
+                    }
 
                     // add all the new references
                     if (uuidsToAdd.Count > 0)
@@ -250,12 +341,16 @@ namespace Organisation.IntegrationLayer
 
                         foreach (string uuidToAdd in uuidsToAdd)
                         {
-                            newUnits[i++] = helper.CreateOrgEnhedRelation(uuidToAdd, virkning);
+                            newUnits[i++] = helper.CreateOrgEnhedRelation(uuidToAdd, unitRelationVirkning);
                         }
 
                         input.RelationListe.TilknyttedeEnheder = newUnits;
                         changes = true;
                     }
+                }
+                else
+                {
+                    log.Error("Unsupported updateIndicator for enhedsrelationer: " + unitIndicator.ToString());
                 }
                 #endregion
 
@@ -429,7 +524,7 @@ namespace Organisation.IntegrationLayer
                 return result;
             }
 
-            FiltreretOejebliksbilledeType[] resultCandidates = GetLatestRegistrations(uuidCandidates.ToArray());
+            FiltreretOejebliksbilledeType[] resultCandidates = GetLatestRegistrations(uuidCandidates.ToArray(), string.Equals(UUIDConstants.ORGFUN_POSITION, functionsTypeUuid));
             if (resultCandidates == null || resultCandidates.Length == 0)
             {
                 return result;
@@ -670,6 +765,17 @@ namespace Organisation.IntegrationLayer
                 soegInput.RelationListe.TilknyttedeBrugere = new BrugerFlerRelationType[1];
                 soegInput.RelationListe.TilknyttedeBrugere[0] = new BrugerFlerRelationType();
                 soegInput.RelationListe.TilknyttedeBrugere[0].ReferenceID = reference;
+
+                // when, and only when, we search for positions, we also want future positions because
+                // we know care about start/stop dates ;)
+                if (string.Equals(functionsTypeUuid, UUIDConstants.ORGFUN_POSITION))
+                {
+                    soegInput.RelationListe.TilknyttedeBrugere[0].Virkning = new VirkningType();
+                    soegInput.RelationListe.TilknyttedeBrugere[0].Virkning.FraTidspunkt = new TidspunktType();
+                    soegInput.RelationListe.TilknyttedeBrugere[0].Virkning.FraTidspunkt.Item = DateTime.Now;
+                    soegInput.RelationListe.TilknyttedeBrugere[0].Virkning.FraTidspunkt = new TidspunktType();
+                    soegInput.RelationListe.TilknyttedeBrugere[0].Virkning.FraTidspunkt.Item = true;
+                }
             }
 
             if (!String.IsNullOrEmpty(unitUuid))
@@ -681,6 +787,17 @@ namespace Organisation.IntegrationLayer
                 soegInput.RelationListe.TilknyttedeEnheder = new OrganisationEnhedFlerRelationType[1];
                 soegInput.RelationListe.TilknyttedeEnheder[0] = new OrganisationEnhedFlerRelationType();
                 soegInput.RelationListe.TilknyttedeEnheder[0].ReferenceID = reference;
+
+                // when, and only when, we search for positions, we also want future positions because
+                // we know care about start/stop dates ;)
+                if (string.Equals(functionsTypeUuid, UUIDConstants.ORGFUN_POSITION))
+                {
+                    soegInput.RelationListe.TilknyttedeEnheder[0].Virkning = new VirkningType();
+                    soegInput.RelationListe.TilknyttedeEnheder[0].Virkning.FraTidspunkt = new TidspunktType();
+                    soegInput.RelationListe.TilknyttedeEnheder[0].Virkning.FraTidspunkt.Item = DateTime.Now;
+                    soegInput.RelationListe.TilknyttedeEnheder[0].Virkning.FraTidspunkt = new TidspunktType();
+                    soegInput.RelationListe.TilknyttedeEnheder[0].Virkning.FraTidspunkt.Item = true;
+                }
             }
 
             if (!String.IsNullOrEmpty(itSystemUuid))
@@ -729,11 +846,11 @@ namespace Organisation.IntegrationLayer
             }
         }
 
-        public void Deactivate(string uuid, DateTime timestamp)
+        public void Deactivate(string uuid, DateTime timestamp, bool futurePositions = false)
         {
             log.Debug("Attempting Deactivate on OrganisationFunktion with uuid " + uuid);
 
-            RegistreringType1 registration = GetLatestRegistration(uuid);
+            RegistreringType1 registration = GetLatestRegistration(uuid, futurePositions);
             if (registration == null)
             {
                 log.Debug("Cannot call Deactivate on OrganisationFunktion with uuid " + uuid + " because it does not exist in Organisation");
@@ -755,7 +872,7 @@ namespace Organisation.IntegrationLayer
                 {
                     foreach (var bruger in input.RelationListe.TilknyttedeBrugere)
                     {
-                        StubUtil.TerminateVirkning(bruger.Virkning, timestamp);
+                        StubUtil.TerminateVirkning(bruger.Virkning, timestamp, futurePositions);
                     }
                 }
 
@@ -764,7 +881,7 @@ namespace Organisation.IntegrationLayer
                 {
                     foreach (var enhed in input.RelationListe.TilknyttedeEnheder)
                     {
-                        StubUtil.TerminateVirkning(enhed.Virkning, timestamp);
+                        StubUtil.TerminateVirkning(enhed.Virkning, timestamp, futurePositions);
                     }
                 }
 
@@ -805,9 +922,9 @@ namespace Organisation.IntegrationLayer
             }
         }
 
-        public RegistreringType1 GetLatestRegistration(string uuid)
+        public RegistreringType1 GetLatestRegistration(string uuid, bool futurePositions = false)
         {
-            FiltreretOejebliksbilledeType[] registrations = GetLatestRegistrations(new string[] { uuid });
+            FiltreretOejebliksbilledeType[] registrations = GetLatestRegistrations(new string[] { uuid }, futurePositions);
             if (registrations == null || registrations.Length == 0)
             {
                 return null;
@@ -851,7 +968,7 @@ namespace Organisation.IntegrationLayer
             return result;
         }
 
-        public FiltreretOejebliksbilledeType[] GetLatestRegistrations(string[] uuids)
+        public FiltreretOejebliksbilledeType[] GetLatestRegistrations(string[] uuids, bool futurePositions = false)
         {
             ListInputType listInput = new ListInputType();
             listInput.UUIDIdentifikator = uuids;
@@ -861,6 +978,14 @@ namespace Organisation.IntegrationLayer
             request.ListRequest1.ListInput = listInput;
             request.ListRequest1.AuthorityContext = new AuthorityContextType();
             request.ListRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+
+            if (futurePositions)
+            {
+                request.ListRequest1.ListInput.VirkningFraFilter = new TidspunktType();
+                request.ListRequest1.ListInput.VirkningFraFilter.Item = DateTime.Now;
+                request.ListRequest1.ListInput.VirkningTilFilter = new TidspunktType();
+                request.ListRequest1.ListInput.VirkningTilFilter.Item = true;
+            }
 
             OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "List", helper.CreatePort());
 

@@ -159,7 +159,7 @@ namespace Organisation.IntegrationLayer
 
                 // compare latest property to the local object
                 EgenskabType latestProperty = StubUtil.GetLatestProperty(input.AttributListe.Egenskab);
-                if (latestProperty == null || !latestProperty.BrugerNavn.Equals(user.UserId) || (user.ShortKey != null && !latestProperty.BrugervendtNoegleTekst.Equals(user.ShortKey)))
+                if (!string.Equals(latestProperty?.BrugerNavn, user.UserId) || (!string.IsNullOrEmpty(user.ShortKey) && !string.Equals(latestProperty?.BrugervendtNoegleTekst, user.ShortKey)))
                 {
                     // end the validity of open-ended property
                     if (latestProperty == null)
@@ -171,7 +171,7 @@ namespace Organisation.IntegrationLayer
                     // create a new property
                     EgenskabType newProperty = new EgenskabType();
                     newProperty.Virkning = helper.GetVirkning(user.Timestamp);
-                    newProperty.BrugervendtNoegleTekst = ((user.ShortKey != null) ? user.ShortKey : latestProperty.BrugervendtNoegleTekst);
+                    newProperty.BrugervendtNoegleTekst = ((!string.IsNullOrEmpty(user.ShortKey)) ? user.ShortKey : latestProperty.BrugervendtNoegleTekst);
                     newProperty.BrugerNavn = user.UserId;
 
                     // create a new set of properties

@@ -239,6 +239,28 @@ namespace Organisation.IntegrationLayer
             return virkning;
         }
 
+        internal VirkningType GetVirkning(string startDate, string stopDate)
+        {
+            TidspunktType beginTime = new TidspunktType();
+            beginTime.Item = DateTime.Parse(startDate).Date + new TimeSpan(0, 0, 0);
+
+            VirkningType virkning = new VirkningType();
+            virkning.AktoerRef = GetOrganisationReference();
+            virkning.AktoerTypeKode = AktoerTypeKodeType.Organisation;
+            virkning.AktoerTypeKodeSpecified = true;
+            virkning.FraTidspunkt = beginTime;
+
+            if (!string.IsNullOrEmpty(stopDate))
+            {
+                TidspunktType endTime = new TidspunktType();
+                endTime.Item = DateTime.Parse(stopDate).Date + new TimeSpan(0, 0, 0);
+
+                virkning.TilTidspunkt = endTime;
+            }
+
+            return virkning;
+        }
+
         internal OrganisationFunktionType GetOrganisationFunktionType(string uuid, RegistreringType1 registration)
         {
             OrganisationFunktionType organisationType = new OrganisationFunktionType();
