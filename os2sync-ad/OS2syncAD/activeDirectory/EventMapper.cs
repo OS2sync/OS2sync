@@ -94,6 +94,13 @@ namespace OS2syncAD
                     orgUnit.ShortKey = getSingleAttribute(anEvent, "ou");
                 }
 
+                // overwrite from configuration for OU Name
+                string altName = AppConfiguration.GetOUName(orgUnit.Uuid);
+                if (altName != null)
+                {
+                    orgUnit.Name = altName;
+                }
+
                 if (!string.IsNullOrEmpty(AppConfiguration.OUAttributeEan) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributeEan))
                 {
                     orgUnit.Ean = getSingleAttribute(anEvent, AppConfiguration.OUAttributeEan);

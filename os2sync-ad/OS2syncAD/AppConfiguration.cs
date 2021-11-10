@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace OS2syncAD
 {
@@ -13,6 +15,11 @@ namespace OS2syncAD
                  .SetBasePath(Directory.GetCurrentDirectory())
                  .AddJsonFile("appsettings.json")
                  .Build();
+        }
+
+        public static string GetOUName(string uuid)
+        {
+            return configuration["AD:OrgUnitNameMap:" + uuid];
         }
 
         public static string DBConnectionString
@@ -36,6 +43,22 @@ namespace OS2syncAD
             get
             {
                 return configuration["AD:RootOU"];
+            }
+        }
+
+        public static bool CleanupOUJobEnabled
+        {
+            get
+            {
+                return "true".Equals(configuration["CleanupOUJobEnabled"]);
+            }
+        }
+
+        public static string CleanOUJobCron
+        {
+            get
+            {
+                return configuration["CleanupOUJobCron"];
             }
         }
 

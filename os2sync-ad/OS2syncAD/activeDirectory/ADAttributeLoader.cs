@@ -22,6 +22,7 @@ namespace OS2syncAD
             // if the CN is not a child of any of the roots (or one of the roots), we block it)
             if (!inHierarchy)
             {
+                log.Debug($"cn={cn} is not a child of any of the roots (or one of the roots) root={rootOU}, we block it)");
                 return Blocked(cn);
             }
 

@@ -63,6 +63,9 @@
     <None Update="mssql\V1_3_0_2__Add_new_dtr_address.sql">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="mssql\V1_3_0_3__Fix_error_table_again.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
