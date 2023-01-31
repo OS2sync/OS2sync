@@ -68,7 +68,7 @@ namespace Organisation.IntegrationLayer
             request.LaesRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
 
             // send request
-            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "List", helper.CreatePort());
+            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Laes", helper.CreatePort());
 
             try
             {

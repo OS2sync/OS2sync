@@ -16,6 +16,8 @@ namespace Organisation.BusinessLayer.DTO.Registration
         public string ParentOrgUnitUuid { get; set; }
         public string PayoutUnitUuid { get; set; }
         public string ManagerUuid { get; set; }
+
+        [System.Text.Json.Serialization.JsonIgnore]
         public DateTime Timestamp { get; set; } = DateTime.Now.AddMinutes(-5);
         public string PhoneNumber { get; set; }
         public string Email { get; set; }
@@ -34,7 +36,12 @@ namespace Organisation.BusinessLayer.DTO.Registration
         public string Url { get; set; }
         public string Landline { get; set; }
         public string Post { get; set; }
+        public string FOA { get; set; }
+        public string PNR { get; set; }
+        public string SOR { get; set; }
         public List<string> Tasks { get; set; }
+        public List<string> ItSystems { get; set; }
         public List<string> ContactForTasks { get; set; }
+        public List<string> ContactPlaces { get; set; }
     }
 }

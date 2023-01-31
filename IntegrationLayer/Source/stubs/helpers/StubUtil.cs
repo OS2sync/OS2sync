@@ -123,6 +123,32 @@ namespace Organisation.IntegrationLayer
             return default(GyldighedType);
         }
 
+        public static bool TerminateObjectsInOrgFromUuidList(dynamic orgArray, List<string> toTerminate, DateTime timestamp)
+        {
+            bool changes = false;
+
+            if (orgArray != null && toTerminate != null)
+            {
+                foreach (var objectInOrg in orgArray)
+                {
+                    foreach (var term in toTerminate)
+                    {
+                        if (term.Equals(objectInOrg.ReferenceID.Item))
+                        {
+                            if (StubUtil.TerminateVirkning(objectInOrg.Virkning, timestamp))
+                            {
+                                changes = true;
+                            }
+
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return changes;
+        }
+
         public static bool TerminateObjectsInOrgNoLongerPresentLocally(dynamic orgArray, dynamic localArray, DateTime timestamp, bool uuidSubReference)
         {
             bool changes = false;

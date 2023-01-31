@@ -37,7 +37,7 @@ namespace Organisation.ServiceLayer
         }
 
         [HttpGet]
-        public IActionResult Read([FromHeader] string cvr, [FromHeader] string apiKey)
+        public IActionResult Read([FromHeader] string cvr, [FromHeader] string apiKey, [FromHeader] string onlyOUs)
         {
             if (!ApiKeyFilter.ValidApiKey(apiKey))
             {
@@ -53,14 +53,15 @@ namespace Organisation.ServiceLayer
 
                     log.Info("Fetching hierarchy for " + OrganisationRegistryProperties.GetCurrentMunicipality());
 
+                    ReadPositions readPositions = ReadPositions.YES;
+                    if ("true".Equals(onlyOUs))
+                    {
+                        readPositions = ReadPositions.NO;
+                    }
+
                     // read OUs
                     List<global::IntegrationLayer.OrganisationFunktion.FiltreretOejebliksbilledeType> allUnitRoles;
-                    var ous = service.ReadOUHierarchy(cvr, out allUnitRoles, null, ReadTasks.NO, ReadManager.NO, ReadAddresses.NO, ReadPayoutUnit.NO, ReadPositions.YES, ReadContactForTasks.NO);
-
-                    // read users
-                    var userUuids = service.FindAllUsers(ous).Distinct().ToList();
-                    var users = service.ReadUsers(cvr, userUuids, allUnitRoles, null, ReadAddresses.YES, ReadParentDetails.NO);
-                    log.Info("Found " + users.Count + " users");
+                    var ous = service.ReadOUHierarchy(cvr, out allUnitRoles, null, ReadTasks.NO, ReadManager.NO, ReadAddresses.NO, ReadPayoutUnit.NO, ReadContactPlaces.NO, readPositions, ReadContactForTasks.NO);
 
                     // construct result
                     var res = new Hierarchy();
@@ -72,46 +73,55 @@ namespace Organisation.ServiceLayer
                         Uuid = ou.Uuid
                     }).ToList();
 
-                    // users has a slightly more complex structure
-                    foreach (var user in users) {
-                        if (string.IsNullOrEmpty(user.Person?.Name))
-                        {
-                            log.Warn("User with uuid " + user.Uuid + " does not have a Person.Name for CVR: " + cvr);
-                            continue;
-                        }
+                    // read users
+                    var userUuids = service.FindAllUsers(ous).Distinct().ToList();
+                    var users = service.ReadUsers(cvr, userUuids, allUnitRoles, null, ReadAddresses.YES, ReadParentDetails.NO);
+                    log.Info("Found " + users.Count + " users");
 
-                        BasicUser basicUser = new BasicUser();
-                        basicUser.Name = user.Person.Name;
-                        basicUser.UserId = user.UserId;
-                        basicUser.Uuid = user.Uuid;
-
-                        if (user.Addresses != null)
+                    if (readPositions == ReadPositions.YES)
+                    {
+                        // users has a slightly more complex structure
+                        foreach (var user in users)
                         {
-                            foreach (var address in user.Addresses)
+                            if (string.IsNullOrEmpty(user.Person?.Name))
                             {
-                                if (address is Email)
+                                log.Warn("User with uuid " + user.Uuid + " does not have a Person.Name for CVR: " + cvr);
+                                continue;
+                            }
+
+                            BasicUser basicUser = new BasicUser();
+                            basicUser.Name = user.Person.Name;
+                            basicUser.UserId = user.UserId;
+                            basicUser.Uuid = user.Uuid;
+
+                            if (user.Addresses != null)
+                            {
+                                foreach (var address in user.Addresses)
                                 {
-                                    basicUser.Email = address.Value;
-                                }
-                                else if (address is Phone)
-                                {
-                                    basicUser.Telephone = address.Value;
+                                    if (address is Email)
+                                    {
+                                        basicUser.Email = address.Value;
+                                    }
+                                    else if (address is Phone)
+                                    {
+                                        basicUser.Telephone = address.Value;
+                                    }
                                 }
                             }
-                        }
 
-                        if (user.Positions != null)
-                        {
-                            foreach (var position in user.Positions)
+                            if (user.Positions != null)
                             {
-                                basicUser.Positions.Add(new BasicPosition() {
-                                    Name = position.Name,
-                                    Uuid = position.OU.Uuid
-                                });
+                                foreach (var position in user.Positions)
+                                {
+                                    basicUser.Positions.Add(new BasicPosition() {
+                                        Name = position.Name,
+                                        Uuid = position.OU.Uuid
+                                    });
+                                }
                             }
-                        }
                         
-                        res.Users.Add(basicUser);
+                            res.Users.Add(basicUser);
+                        }
                     }
 
                     log.Info("Hierarchy build for " + OrganisationRegistryProperties.GetCurrentMunicipality() + ". Adding to cache with uuid: " + uuid);

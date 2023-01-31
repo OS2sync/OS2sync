@@ -36,6 +36,97 @@ namespace Organisation.IntegrationLayer
             registration.RelationListe.TilknyttedeFunktioner = orgFunktionFlerRelationTypes;
         }
 
+        internal bool UpdateItSystemer(List<string> itSystemer, VirkningType virkning, RegistreringType1 registration, DateTime timestamp)
+        {
+            bool changes = false;
+
+            // make sure we have a list to work with below, and that there are no duplicates
+            itSystemer = (itSystemer != null) ? itSystemer : new List<string>();
+            itSystemer = itSystemer.Distinct().ToList();
+
+            // find those we need to add (at the end of this method)
+            var toAdd = new List<string>();
+            foreach (var itSystem in itSystemer)
+            {
+                bool add = true;
+
+                if (registration.RelationListe?.TilknyttedeItSystemer != null)
+                {
+                    foreach (var itSystemRelation in registration.RelationListe.TilknyttedeItSystemer)
+                    {
+                        string uuid = itSystemRelation.ReferenceID?.Item;
+
+                        if (itSystem.Equals(uuid))
+                        {
+                            add = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (add)
+                {
+                    changes = true;
+                    toAdd.Add(itSystem);
+                }
+            }
+
+            if (registration.RelationListe?.TilknyttedeItSystemer != null)
+            {
+                IEqualityComparer<ItSystemFlerRelationType> comparer = new ItSystemFlerRelationTypeComparer();
+
+                // remove duplicates from registration.RelationListe.TilknyttedeItSystemer (because sometimes we get duplicates back from KMD)
+                registration.RelationListe.TilknyttedeItSystemer = registration.RelationListe.TilknyttedeItSystemer.Distinct(comparer).ToArray();
+
+                // terminate virkning on elements no longer in local
+                foreach (var itSystemRelation in registration.RelationListe.TilknyttedeItSystemer)
+                {
+                    string uuid = itSystemRelation.ReferenceID?.Item;
+
+                    if (uuid != null && !itSystemer.Contains(uuid))
+                    {
+                        changes = true;
+                        StubUtil.TerminateVirkning(itSystemRelation.Virkning, timestamp);
+                    }
+                }
+            }
+
+            // actually add the new ones to this registration
+            if (toAdd.Count > 0)
+            {
+                if (registration.RelationListe.TilknyttedeItSystemer == null || registration.RelationListe.TilknyttedeItSystemer.Length == 0)
+                {
+                    AddItSystemer(toAdd, virkning, registration);
+                }
+                else
+                {
+                    ItSystemFlerRelationType[] itSystemTypes = new ItSystemFlerRelationType[toAdd.Count + registration.RelationListe.TilknyttedeItSystemer.Length];
+
+                    // add new
+                    for (int i = 0; i < toAdd.Count; i++)
+                    {
+                        UnikIdType tilknytteFunktionId = StubUtil.GetReference<UnikIdType>(toAdd[i], ItemChoiceType.UUIDIdentifikator);
+
+                        ItSystemFlerRelationType itSystemType = new ItSystemFlerRelationType();
+                        itSystemType.ReferenceID = tilknytteFunktionId;
+                        itSystemType.Virkning = virkning;
+
+                        itSystemTypes[i] = itSystemType;
+                    }
+
+                    // copy existing
+                    for (int j = 0, i = toAdd.Count; i < itSystemTypes.Length && j < registration.RelationListe.TilknyttedeItSystemer.Length; i++, j++)
+                    {
+                        itSystemTypes[i] = registration.RelationListe.TilknyttedeItSystemer[j];
+                    }
+
+                    registration.RelationListe.TilknyttedeItSystemer = itSystemTypes;
+                }
+            }
+
+            return changes;
+        }
+
         internal bool UpdateOpgaver(List<string> opgaver, VirkningType virkning, RegistreringType1 registration, DateTime timestamp)
         {
             if (registryProperties.DisableKleOpgaver.Count > 0)
@@ -296,7 +387,6 @@ namespace Organisation.IntegrationLayer
             registration.LivscyklusKode = LivscyklusKodeType.Importeret;
             registration.LivscyklusKodeSpecified = true;
             registration.BrugerRef = systemReference;
-            registration.NoteTekst = (ou.ParentOrgUnitUuid == null) ? "STSOrgSync" : null; // TODO: update according to AP26 once we know how to identify the root OU
 
             registration.AttributListe = new AttributListeType();
             registration.RelationListe = new RelationListeType();
@@ -361,6 +451,30 @@ namespace Organisation.IntegrationLayer
             registration.RelationListe.Enhedstype.Virkning = virkning;
 
             return true;
+        }
+
+        internal void AddItSystemer(List<string> itSystemUuids, VirkningType virkning, RegistreringType1 registration)
+        {
+            if (itSystemUuids == null || itSystemUuids.Count == 0)
+            {
+                return;
+            }
+
+            // remove duplicates
+            itSystemUuids = itSystemUuids.Distinct().ToList();
+
+            registration.RelationListe.TilknyttedeItSystemer = new ItSystemFlerRelationType[itSystemUuids.Count];
+
+            for (int i = 0; i < itSystemUuids.Count; i++)
+            {
+                ItSystemFlerRelationType itSystem = new ItSystemFlerRelationType();
+                itSystem.ReferenceID = new UnikIdType();
+                itSystem.ReferenceID.Item = itSystemUuids[i];
+                itSystem.ReferenceID.ItemElementName = ItemChoiceType.UUIDIdentifikator;
+                itSystem.Virkning = virkning;
+
+                registration.RelationListe.TilknyttedeItSystemer[i] = itSystem;
+            }
         }
 
         internal void AddAddressReferences(List<AddressRelation> references, VirkningType virkning, RegistreringType1 registration)
@@ -441,6 +555,18 @@ namespace Organisation.IntegrationLayer
                         AdresseFlerRelationType postReturn = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_POST_RETURN, virkning);
                         registration.RelationListe.Adresser[i] = postReturn;
                         break;
+                    case AddressRelationType.FOA:
+                        AdresseFlerRelationType foa = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_FOA, virkning);
+                        registration.RelationListe.Adresser[i] = foa;
+                        break;
+                    case AddressRelationType.PNR:
+                        AdresseFlerRelationType pnr = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_PNR, virkning);
+                        registration.RelationListe.Adresser[i] = pnr;
+                        break;
+                    case AddressRelationType.SOR:
+                        AdresseFlerRelationType sor = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_SOR, virkning);
+                        registration.RelationListe.Adresser[i] = sor;
+                        break;
                     default:
                         throw new Exception("Cannot import OrganisationEnhed with addressRelationType = " + addressRelation.Type);
                 }
@@ -498,6 +624,29 @@ namespace Organisation.IntegrationLayer
         }
 
         public int GetHashCode([DisallowNull] KlasseFlerRelationType obj)
+        {
+            if (obj?.ReferenceID?.Item == null)
+            {
+                return 0;
+            }
+
+            return obj.ReferenceID.Item.GetHashCode();
+        }
+    }
+
+    internal class ItSystemFlerRelationTypeComparer : IEqualityComparer<ItSystemFlerRelationType>
+    {
+        public bool Equals([AllowNull] ItSystemFlerRelationType x, [AllowNull] ItSystemFlerRelationType y)
+        {
+            if (string.Compare(x?.ReferenceID?.Item, y?.ReferenceID?.Item) == 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public int GetHashCode([DisallowNull] ItSystemFlerRelationType obj)
         {
             if (obj?.ReferenceID?.Item == null)
             {

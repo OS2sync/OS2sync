@@ -4,6 +4,8 @@ using Organisation.BusinessLayer;
 using System;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Linq;
+using System.Text.Json;
 
 namespace Organisation.SchedulingLayer
 {
@@ -79,6 +81,20 @@ namespace Organisation.SchedulingLayer
             count = 0;
 
             var users = dao.Get4OldestEntries();
+
+            // remove duplicates
+            users = users.GroupBy(u => u.Uuid)
+                .Select(duplicateUsers => {
+                    // order users by Id desc
+                    var users = duplicateUsers.OrderByDescending(user => user.Id);
+                    
+                    // remove all but first
+                    users.Skip(1).ToList().ForEach(u => dao.Delete(u.Id));
+                    
+                    // return first
+                    return users.First();
+                }).ToList();
+
             do
             {
                 if (users.Count > 0)
@@ -146,9 +162,30 @@ namespace Organisation.SchedulingLayer
                 }
                 else
                 {
-                    service.Update(user);
-                }
+                    bool identicalToLastSuccess = false;
+                    if (user.Operation.Equals(OperationType.UPDATE))
+                    {
 
+                        // check for no changes
+                        var succesUsers = dao.GetSuccessEntries(user.Uuid);
+                        var userToCompare = succesUsers.Where(user => user.Operation.Equals(OperationType.UPDATE)).OrderBy(user => user.Id).LastOrDefault();
+                        if (userToCompare != null)
+                        {
+                            string jsonUserToCompare = JsonSerializer.Serialize(userToCompare);
+                            string jsonUser = JsonSerializer.Serialize(user);
+                            identicalToLastSuccess = jsonUserToCompare.Equals(jsonUser);
+                        }
+                    }
+
+                    if (identicalToLastSuccess)
+                    {
+                        log.Debug("Skipping user update for '" + user.Uuid + "' because it was identical to last known successful update");
+                    }
+                    else
+                    {
+                        service.Update(user);
+                    }
+                }
                 dao.OnSuccess(user.Id);
                 dao.Delete(user.Id);
 
@@ -177,6 +214,20 @@ namespace Organisation.SchedulingLayer
             count = 0;
 
             var orgUnits = dao.Get4OldestEntries();
+
+            // remove duplicates
+            orgUnits = orgUnits.GroupBy(u => u.Uuid)
+                .Select(duplicateOUs => {
+                    // order orgUnits by Id desc
+                    var ous = duplicateOUs.OrderByDescending(user => user.Id);
+                    
+                    // remove all but first
+                    ous.Skip(1).ToList().ForEach(ou => dao.Delete(ou.Id));
+                    
+                    // return first
+                    return ous.First();
+                }).ToList();
+
             do {
                 if (orgUnits.Count > 0)
                 {
@@ -245,7 +296,29 @@ namespace Organisation.SchedulingLayer
                 }
                 else
                 {
-                    service.Update(ou);
+                    bool identicalToLastSuccess = false;
+                    if (ou.Operation.Equals(OperationType.UPDATE))
+                    {
+                        // check for no changes
+                        var succesOus = dao.GetSuccessEntries(ou.Uuid);
+                        var ouToCompare = succesOus.Where(ou => ou.Operation.Equals(OperationType.UPDATE)).OrderBy(ou => ou.Id).LastOrDefault();
+                        if (ouToCompare != null)
+                        {
+                            string jsonOUToCompare = JsonSerializer.Serialize(ouToCompare);
+                            string jsonOU = JsonSerializer.Serialize(ou);
+                            identicalToLastSuccess = jsonOUToCompare.Equals(jsonOU);
+                        }
+
+                    }
+                    if (identicalToLastSuccess)
+                    {
+                        log.Debug("Skipping ou update for '" + ou.Uuid + "' because it was identical to last known successful update");
+                    }
+                    else
+                    {
+                        service.Update(ou);
+                    }
+                    
                 }
 
                 dao.OnSuccess(ou.Id);

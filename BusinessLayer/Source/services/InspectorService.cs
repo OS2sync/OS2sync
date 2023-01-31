@@ -17,6 +17,7 @@ namespace Organisation.BusinessLayer
     public enum ReadContactForTasks { YES, NO };
     public enum ReadManager { YES, NO };
     public enum ReadTasks { YES, NO };
+    public enum ReadContactPlaces { YES, NO };
 
     public class InspectorService
     {
@@ -703,9 +704,27 @@ namespace Organisation.BusinessLayer
                         Value = addressValue
                     });
                 }
+                else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_LANDLINE))
+                {
+                    addresses.Add(new Landline()
+                    {
+                        Uuid = addressUuid,
+                        ShortKey = addressShortKey,
+                        Value = addressValue
+                    });
+                }
                 else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_PHONE))
                 {
                     addresses.Add(new Phone()
+                    {
+                        Uuid = addressUuid,
+                        ShortKey = addressShortKey,
+                        Value = addressValue
+                    });
+                }
+                else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_FMKID))
+                {
+                    addresses.Add(new FMKID()
                     {
                         Uuid = addressUuid,
                         ShortKey = addressShortKey,
@@ -766,9 +785,27 @@ namespace Organisation.BusinessLayer
                     Value = addressValue
                 });
             }
+            else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_LANDLINE))
+            {
+                addresses.Add(new Landline()
+                {
+                    Uuid = addressUuid,
+                    ShortKey = addressShortKey,
+                    Value = addressValue
+                });
+            }
             else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_PHONE))
             {
                 addresses.Add(new Phone()
+                {
+                    Uuid = addressUuid,
+                    ShortKey = addressShortKey,
+                    Value = addressValue
+                });
+            }
+            else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_FMKID))
+            {
+                addresses.Add(new FMKID()
                 {
                     Uuid = addressUuid,
                     ShortKey = addressShortKey,
@@ -781,7 +818,7 @@ namespace Organisation.BusinessLayer
             }
         }
 
-        public OU ReadOUObject(string uuid, ReadTasks readTasks = ReadTasks.YES, ReadManager readManager = ReadManager.YES, ReadAddresses readAddress = ReadAddresses.YES, ReadPayoutUnit readPayoutUnit = ReadPayoutUnit.YES, ReadPositions readPositions = ReadPositions.YES, ReadContactForTasks readContactForTasks = ReadContactForTasks.YES)
+        public OU ReadOUObject(string uuid, ReadTasks readTasks = ReadTasks.YES, ReadManager readManager = ReadManager.YES, ReadAddresses readAddress = ReadAddresses.YES, ReadPayoutUnit readPayoutUnit = ReadPayoutUnit.YES, ReadContactPlaces readContactPlaces = ReadContactPlaces.YES, ReadPositions readPositions = ReadPositions.YES, ReadContactForTasks readContactForTasks = ReadContactForTasks.YES)
         {
             global::IntegrationLayer.OrganisationEnhed.RegistreringType1 registration = organisationEnhedStub.GetLatestRegistration(uuid);
             if (registration == null)
@@ -789,10 +826,10 @@ namespace Organisation.BusinessLayer
                 throw new RegistrationNotFoundException("Could not locate OU with uuid '" + uuid + "'");
             }
 
-            return MapRegistrationToOU(registration, uuid, null, readTasks, readManager, readAddress, readPayoutUnit, readPositions, readContactForTasks);
+            return MapRegistrationToOU(registration, uuid, null, readTasks, readManager, readAddress, readPayoutUnit, readContactPlaces, readPositions, readContactForTasks);
         }
 
-        private OU MapRegistrationToOU(dynamic registration, string uuid, List<FiltreretOejebliksbilledeType> allUnitRoles, ReadTasks readTasks = ReadTasks.YES, ReadManager readManager = ReadManager.YES, ReadAddresses readAddresses = ReadAddresses.YES, ReadPayoutUnit readPayoutUnit = ReadPayoutUnit.YES, ReadPositions readPositions = ReadPositions.YES, ReadContactForTasks readContactForTasks = ReadContactForTasks.YES)
+        private OU MapRegistrationToOU(dynamic registration, string uuid, List<FiltreretOejebliksbilledeType> allUnitRoles, ReadTasks readTasks = ReadTasks.YES, ReadManager readManager = ReadManager.YES, ReadAddresses readAddresses = ReadAddresses.YES, ReadPayoutUnit readPayoutUnit = ReadPayoutUnit.YES, ReadContactPlaces readContactPlaces = ReadContactPlaces.YES, ReadPositions readPositions = ReadPositions.YES, ReadContactForTasks readContactForTasks = ReadContactForTasks.YES)
         {
             var wrapper = new OrgUnitRegWrapper();
             wrapper.Registration = registration;
@@ -801,7 +838,7 @@ namespace Organisation.BusinessLayer
             var wrappers = new List<OrgUnitRegWrapper>();
             wrappers.Add(wrapper);
 
-            var result = MapRegistrationsToOUs(wrappers, allUnitRoles, readTasks, readManager, readAddresses, readPayoutUnit, readPositions, readContactForTasks);
+            var result = MapRegistrationsToOUs(wrappers, allUnitRoles, readTasks, readManager, readAddresses, readPayoutUnit, readContactPlaces, readPositions, readContactForTasks);
 
             if (result.Count > 0)
             {
@@ -1070,7 +1107,7 @@ namespace Organisation.BusinessLayer
             result.AddRange(tmpResult);
         }
 
-        public List<OU> ReadOUHierarchy(string cvr, out List<FiltreretOejebliksbilledeType> allUnitRoles, Func<long, long, bool> progressCallback, ReadTasks readTasks = ReadTasks.YES, ReadManager readManager = ReadManager.YES, ReadAddresses readAddress = ReadAddresses.YES, ReadPayoutUnit readPayoutUnit = ReadPayoutUnit.YES, ReadPositions readPositions = ReadPositions.YES, ReadContactForTasks readContactForTasks = ReadContactForTasks.YES)
+        public List<OU> ReadOUHierarchy(string cvr, out List<FiltreretOejebliksbilledeType> allUnitRoles, Func<long, long, bool> progressCallback, ReadTasks readTasks = ReadTasks.YES, ReadManager readManager = ReadManager.YES, ReadAddresses readAddress = ReadAddresses.YES, ReadPayoutUnit readPayoutUnit = ReadPayoutUnit.YES, ReadContactPlaces readContactPlaces = ReadContactPlaces.YES, ReadPositions readPositions = ReadPositions.YES, ReadContactForTasks readContactForTasks = ReadContactForTasks.YES)
         {
             List<OU> result = new List<OU>();
             allUnitRoles = new List<FiltreretOejebliksbilledeType>();
@@ -1138,7 +1175,7 @@ namespace Organisation.BusinessLayer
                 {
                     try
                     {
-                        var mappedOus = MapRegistrationsToOUs(bulk, someUnitRoles, readTasks, readManager, readAddress, readPayoutUnit, readPositions, readContactForTasks);
+                        var mappedOus = MapRegistrationsToOUs(bulk, someUnitRoles, readTasks, readManager, readAddress, readPayoutUnit, readContactPlaces, readPositions, readContactForTasks);
 
                         AddToResult(mappedOus, result);
 
@@ -1153,7 +1190,7 @@ namespace Organisation.BusinessLayer
                         count++;
                         if (count >= 3)
                         {
-                            throw ex;
+                            throw;
                         }
                     }
                 }
@@ -1167,7 +1204,7 @@ namespace Organisation.BusinessLayer
             return result;
         }
 
-        private List<OU> MapRegistrationsToOUs(List<OrgUnitRegWrapper> wrappers, List<FiltreretOejebliksbilledeType> allUnitRoles, ReadTasks readTasks, ReadManager readManager, ReadAddresses readAddresses, ReadPayoutUnit readPayoutUnit, ReadPositions readPositions, ReadContactForTasks readContactForTasks)
+        private List<OU> MapRegistrationsToOUs(List<OrgUnitRegWrapper> wrappers, List<FiltreretOejebliksbilledeType> allUnitRoles, ReadTasks readTasks, ReadManager readManager, ReadAddresses readAddresses, ReadPayoutUnit readPayoutUnit, ReadContactPlaces readContactPlaces, ReadPositions readPositions, ReadContactForTasks readContactForTasks)
         {
             List<string> addressesToRead = new List<string>();
             var result = new List<OU>();
@@ -1193,6 +1230,20 @@ namespace Organisation.BusinessLayer
                         {
                             // TODO: consider converting to real KLE values instead of the UUIDs
                             opgaver.Add(task);
+                        }
+                    }
+                }
+
+                List<string> itSystemer = new List<string>();
+                if (registration.RelationListe?.TilknyttedeItSystemer != null)
+                {
+
+                    foreach (var itSystem in registration.RelationListe.TilknyttedeItSystemer)
+                    {
+                        string itSystemUuid = itSystem.ReferenceID?.Item;
+                        if (!string.IsNullOrEmpty(itSystemUuid))
+                        {
+                            itSystemer.Add(itSystemUuid);
                         }
                     }
                 }
@@ -1310,6 +1361,27 @@ namespace Organisation.BusinessLayer
                                 Uuid = addressUuid
                             });
                         }
+                        else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_FOA))
+                        {
+                            addresses.Add(new FOA()
+                            {
+                                Uuid = addressUuid
+                            });
+                        }
+                        else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_PNR))
+                        {
+                            addresses.Add(new PNR()
+                            {
+                                Uuid = addressUuid
+                            });
+                        }
+                        else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_SOR))
+                        {
+                            addresses.Add(new SOR()
+                            {
+                                Uuid = addressUuid
+                            });
+                        }
                         else
                         {
                             errors.Add("Address Rolle is unknown: " + address.Rolle.Item);
@@ -1337,7 +1409,8 @@ namespace Organisation.BusinessLayer
                 }
 
                 OUReference payoutOU = null;
-                if (readPayoutUnit.Equals(ReadPayoutUnit.YES))
+                List<string> contactPlaces = new List<string>();
+                if (readPayoutUnit.Equals(ReadPayoutUnit.YES) || readContactPlaces.Equals(ReadContactPlaces.YES))
                 {
                     if (registration.RelationListe?.TilknyttedeFunktioner != null)
                     {
@@ -1378,6 +1451,15 @@ namespace Organisation.BusinessLayer
                                             Name = payoutUnitName,
                                             Uuid = payoutUnitUuid
                                         };
+                                    }
+                                }
+                                else if (readContactPlaces.Equals(ReadContactPlaces.YES) && functionState.RelationListe.Funktionstype.ReferenceID.Item.Equals(UUIDConstants.ORGFUN_CONTACT_UNIT))
+                                {
+                                    if (functionState.RelationListe.TilknyttedeEnheder != null && functionState.RelationListe.TilknyttedeEnheder.Length > 0)
+                                    {
+                                        string contactUnitUuid = functionState.RelationListe.TilknyttedeEnheder[0].ReferenceID.Item;
+
+                                        contactPlaces.Add(contactUnitUuid);
                                     }
                                 }
                             }
@@ -1451,7 +1533,9 @@ namespace Organisation.BusinessLayer
                     Timestamp = timestamp,
                     Type = orgUnitType,
                     Tasks = opgaver,
+                    ItSystems = itSystemer,
                     ContactForTasks = contactForTasks,
+                    ContactPlaces = contactPlaces,
                     Errors = errors
                 };
 

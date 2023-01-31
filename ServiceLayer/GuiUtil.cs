@@ -21,7 +21,7 @@ namespace Organisation.ServiceLayer
         {
             if (!ouCache.ContainsKey(uuid))
             {
-                var ou = inspector.ReadOUObject(uuid, ReadTasks.YES, ReadManager.YES, ReadAddresses.YES, ReadPayoutUnit.YES, ReadPositions.YES, ReadContactForTasks.YES);
+                var ou = inspector.ReadOUObject(uuid, ReadTasks.YES, ReadManager.YES, ReadAddresses.YES, ReadPayoutUnit.YES, ReadContactPlaces.YES, ReadPositions.YES, ReadContactForTasks.YES);
 
                 ouCache.Add(uuid, ou);
             }
@@ -47,7 +47,7 @@ namespace Organisation.ServiceLayer
             {
                 if (string.IsNullOrEmpty(orgUnitTreeCache))
                 {
-                    var ous = inspector.ReadOUHierarchy(null, out _, null, ReadTasks.NO, ReadManager.NO, ReadAddresses.NO, ReadPayoutUnit.NO, ReadPositions.NO, ReadContactForTasks.NO);
+                    var ous = inspector.ReadOUHierarchy(null, out _, null, ReadTasks.NO, ReadManager.NO, ReadAddresses.NO, ReadPayoutUnit.NO, ReadContactPlaces.NO, ReadPositions.NO, ReadContactForTasks.NO);
 
                     StringBuilder builder = new StringBuilder();
                     builder.Append("[");

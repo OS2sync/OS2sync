@@ -450,6 +450,18 @@ namespace Organisation.BusinessLayer
             organisationFunktionStub.Deactivate(existingFunctions[0].ObjektType.UUIDIdentifikator, timestamp);
         }
 
+        internal static string GetContactPlaceFunctionUuid(string orgUnitUuid)
+        {
+            var existingFunctions = organisationFunktionStub.SoegAndGetLatestRegistration(UUIDConstants.ORGFUN_CONTACT_UNIT, null, orgUnitUuid, null);
+
+            if (existingFunctions == null || existingFunctions.Count == 0)
+            {
+                return null;
+            }
+
+            return existingFunctions[0].ObjektType.UUIDIdentifikator;
+        }
+
         internal static void UpdateContactForTasks(string uuid, List<string> tasks, DateTime timestamp)
         {
             // search for existing OrgFunction

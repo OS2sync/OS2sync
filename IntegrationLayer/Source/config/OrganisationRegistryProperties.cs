@@ -49,8 +49,8 @@ namespace Organisation.IntegrationLayer
         public Level LogLevel { get; set;} = Level.Info; // default
         public string MigrationScriptsPath { get; set; }
         public List<string> DisableKleOpgaver { get; set; }
-        public bool DisableHenvendelsessteder { get; set; }
-        public bool DisableUdbetalingsenheder { get; set; }
+        public List<string> DisableHenvendelsesstederList { get; set; }
+        public List<string> DisableUdbetalingsenhederList { get; set; }
         public bool SslEnabled { get; set; }
         public string SslKeystorePath { get; set; }
         public string SslKeystorePassword { get; set; }
@@ -104,6 +104,46 @@ namespace Organisation.IntegrationLayer
             }
         }
 
+        public bool DisableHenvendelsessteder()
+        {
+            if (DisableHenvendelsesstederList.Count > 0)
+            {
+                // true is global, disabled for all
+                if (DisableHenvendelsesstederList.Contains("true"))
+                {
+                    return true;
+                }
+
+                // check for CVR of current municipality
+                if (DisableHenvendelsesstederList.Contains(GetCurrentMunicipality()))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool DisableUdbetalingsenheder()
+        {
+            if (DisableUdbetalingsenhederList.Count > 0)
+            {
+                // true is global, disabled for all
+                if (DisableUdbetalingsenhederList.Contains("true"))
+                {
+                    return true;
+                }
+
+                // check for CVR of current municipality
+                if (DisableUdbetalingsenhederList.Contains(GetCurrentMunicipality()))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private void Init()
         {
             var configuration = new ConfigurationBuilder()
@@ -130,8 +170,25 @@ namespace Organisation.IntegrationLayer
                 DisableKleOpgaver.AddRange(tmp.Split(","));
             }
 
-            DisableHenvendelsessteder = "true".Equals(configuration[DISABLE_HENVENDELSESSTEDER]);
-            DisableUdbetalingsenheder = "true".Equals(configuration[DISABLE_UDBETALINGSENHEDER]);
+            DisableHenvendelsesstederList = new List<string>();
+            tmp = configuration[DISABLE_HENVENDELSESSTEDER];
+            if (!string.IsNullOrEmpty(tmp) && !"false".Equals(tmp.ToLower()))
+            {
+                tmp = tmp.ToLower();
+
+                // then it either contains "true" or it contains a list of CVR numbers
+                DisableHenvendelsesstederList.AddRange(tmp.Split(","));
+            }
+
+            DisableUdbetalingsenhederList = new List<string>();
+            tmp = configuration[DISABLE_UDBETALINGSENHEDER];
+            if (!string.IsNullOrEmpty(tmp) && !"false".Equals(tmp.ToLower()))
+            {
+                tmp = tmp.ToLower();
+
+                // then it either contains "true" or it contains a list of CVR numbers
+                DisableUdbetalingsenhederList.AddRange(tmp.Split(","));
+            }
 
             SslEnabled = "true".Equals(configuration[SSL_ENABLED]);
             if (SslEnabled)

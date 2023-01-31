@@ -236,6 +236,14 @@ namespace Organisation.IntegrationLayer
                         AdresseFlerRelationType locationAddres = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_LOCATION, virkning);
                         registration.RelationListe.Adresser[i] = locationAddres;
                         break;
+                    case AddressRelationType.LANDLINE:
+                        AdresseFlerRelationType landlineAddres = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_LANDLINE, virkning);
+                        registration.RelationListe.Adresser[i] = landlineAddres;
+                        break;
+                    case AddressRelationType.FMKID:
+                        AdresseFlerRelationType fmkidAddres = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_FMKID, virkning);
+                        registration.RelationListe.Adresser[i] = fmkidAddres;
+                        break;
                     default:
                         throw new Exception("Cannot import Bruger with addressRelationType = " + addressRelation.Type);
                 }

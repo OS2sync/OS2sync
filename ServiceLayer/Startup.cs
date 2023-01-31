@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json.Serialization;
 
 namespace Organisation.ServiceLayer
 {
@@ -21,6 +22,11 @@ namespace Organisation.ServiceLayer
             services.AddRouting();
             services.AddControllers();
             services.AddRazorPages();
+            services.AddControllers()
+                .AddNewtonsoftJson(options =>
+                {
+                    options.SerializerSettings.ContractResolver = new DefaultContractResolver();
+                });
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

@@ -19,7 +19,9 @@ namespace Organisation.BusinessLayer.DTO.Read
         public List<Position> Positions { get; set; }
         public OrgUnitType Type { get; set; }
         public List<string> Tasks { get; set; }
+        public List<string> ItSystems { get; set; }
         public List<string> ContactForTasks { get; set; }
+        public List<string> ContactPlaces { get; set; }
         public override string ToString() { return this.Name; }
 
         public List<string> Errors { get; set; } = new List<string>();

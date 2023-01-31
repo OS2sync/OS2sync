@@ -32,7 +32,7 @@ namespace Organisation.ServiceLayer
 
                 // read OUs
                 List<global::IntegrationLayer.OrganisationFunktion.FiltreretOejebliksbilledeType> allUnitRoles;
-                List<OU> ous = service.ReadOUHierarchy(cvr, out allUnitRoles, null, ReadTasks.NO, ReadManager.YES, ReadAddresses.YES, ReadPayoutUnit.NO, ReadPositions.NO, ReadContactForTasks.NO);
+                List<OU> ous = service.ReadOUHierarchy(cvr, out allUnitRoles, null, ReadTasks.NO, ReadManager.YES, ReadAddresses.YES, ReadPayoutUnit.NO, ReadContactPlaces.NO, ReadPositions.NO, ReadContactForTasks.NO);
 
                 log.Info("Found " + ous.Count() + " orgUnits in total");
 

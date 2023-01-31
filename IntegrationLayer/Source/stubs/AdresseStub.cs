@@ -87,12 +87,12 @@ namespace Organisation.IntegrationLayer
 
                 // compare latest property to the local object
                 EgenskabType latestProperty = StubUtil.GetLatestProperty(input.AttributListe);
-                if (latestProperty == null || !latestProperty.AdresseTekst.Equals(newValue))
+                if (latestProperty == null || latestProperty.BrugervendtNoegleTekst == null || !latestProperty.AdresseTekst.Equals(newValue))
                 {
                     // create a new property
                     EgenskabType newProperty = new EgenskabType();
                     newProperty.Virkning = helper.GetVirkning(timestamp);
-                    newProperty.BrugervendtNoegleTekst = latestProperty.BrugervendtNoegleTekst;
+                    newProperty.BrugervendtNoegleTekst = !string.IsNullOrEmpty(latestProperty?.BrugervendtNoegleTekst) ? latestProperty.BrugervendtNoegleTekst : IdUtil.GenerateShortKey();
                     newProperty.AdresseTekst = newValue;
 
                     // create a new set of properties

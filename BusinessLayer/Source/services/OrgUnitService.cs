@@ -10,9 +10,10 @@ namespace Organisation.BusinessLayer
     {
         private static log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private OrganisationEnhedStub organisationEnhedStub = new OrganisationEnhedStub();
-        private OrganisationFunktionStub organisationFunktionStub = new OrganisationFunktionStub();
         private OrganisationStub organisationStub = new OrganisationStub();
+        private OrganisationFunktionStub organisationFunktionStub = new OrganisationFunktionStub();
         private InspectorService inspectorService = new InspectorService();
+        private OrganisationRegistryProperties registry = OrganisationRegistryProperties.GetInstance();
 
         /// <summary>
         /// This method will create the object in Organisation - note that if the object already exists, this method
@@ -39,11 +40,24 @@ namespace Organisation.BusinessLayer
                 }
 
                 // if this unit is a working unit, that does payouts in behalf of a payout unit, create a reference to that payout unit
-                if (!string.IsNullOrEmpty(registration.PayoutUnitUuid))
+                if (!registry.DisableUdbetalingsenheder() && !string.IsNullOrEmpty(registration.PayoutUnitUuid))
                 {
                     string payoutUnitFunctionUuid = ServiceHelper.EnsurePayoutUnitFunctionExists(registration.PayoutUnitUuid, registration.Timestamp);
 
-                    orgUnitData.OrgFunctionUuids.Add(payoutUnitFunctionUuid);
+                    orgUnitData.OrgFunctionsToAdd.Add(payoutUnitFunctionUuid);
+                }
+
+                // if this unit uses contactPlaces, make sure to add them
+                if (!registry.DisableHenvendelsessteder() && registration.ContactPlaces != null && registration.ContactPlaces.Count > 0)
+                {
+                    foreach (var cp in registration.ContactPlaces)
+                    {
+                        string functionUuid = ServiceHelper.GetContactPlaceFunctionUuid(cp);
+                        if (functionUuid != null)
+                        {
+                            orgUnitData.OrgFunctionsToAdd.Add(functionUuid);
+                        }
+                    }
                 }
 
                 organisationEnhedStub.Importer(orgUnitData);
@@ -51,7 +65,7 @@ namespace Organisation.BusinessLayer
                 UpdateOrganisationObject(orgUnitData);
 
                 // ensure "henvendelsessted" tasks are created
-                if (!OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder)
+                if (!OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder())
                 {
                     ServiceHelper.UpdateContactForTasks(registration.Uuid, registration.ContactForTasks, registration.Timestamp);
                 }
@@ -120,22 +134,124 @@ namespace Organisation.BusinessLayer
                     // this must happen after addresses have been imported, as it might result in UUID's being created
                     OrgUnitData orgUnitData = MapRegistrationToOrgUnitDTO(registration, addressRefs);
 
-                    #region Update payout units
-                    // if this unit handles payouts on behalf of a payout unit, create a reference to that payout unit
-                    if (!string.IsNullOrEmpty(registration.PayoutUnitUuid))
+                    // deal with ContactPlaces and PayoutUnits
+                    if (!registry.DisableHenvendelsessteder() || !registry.DisableUdbetalingsenheder())
                     {
-                        string payoutUnitFunctionUuid = ServiceHelper.EnsurePayoutUnitFunctionExists(registration.PayoutUnitUuid, registration.Timestamp);
+                        // read all existing functions (if any)
+                        List<string> existingFunctionUuids = new List<string>();
+                        if (result.RelationListe.TilknyttedeFunktioner != null)
+                        {
+                            foreach (var tf in result.RelationListe.TilknyttedeFunktioner)
+                            {
+                                if (tf.ReferenceID?.Item != null)
+                                {
+                                    existingFunctionUuids.Add(tf.ReferenceID.Item);
+                                }
+                            }
+                        }
 
-                        orgUnitData.OrgFunctionUuids.Add(payoutUnitFunctionUuid);
+                        global::IntegrationLayer.OrganisationFunktion.FiltreretOejebliksbilledeType[] existingFunctionDetails = new global::IntegrationLayer.OrganisationFunktion.FiltreretOejebliksbilledeType[0];
+                        if (existingFunctionUuids.Count > 0)
+                        {
+                            existingFunctionDetails = organisationFunktionStub.GetLatestRegistrations(existingFunctionUuids.ToArray());
+                        }
+
+                        #region Update ContactPlaces
+                        if (!registry.DisableHenvendelsessteder())
+                        {
+                            List<string> contactPlaceFunctionUuids = new List<string>();
+
+                            if (registration.ContactPlaces != null && registration.ContactPlaces.Count > 0)
+                            {
+                                foreach (var cp in registration.ContactPlaces)
+                                {
+                                    string functionUuid = ServiceHelper.GetContactPlaceFunctionUuid(cp);
+                                    if (functionUuid != null)
+                                    {
+                                        orgUnitData.OrgFunctionsToAdd.Add(functionUuid);
+                                        contactPlaceFunctionUuids.Add(functionUuid);
+                                    }
+                                    else
+                                    {
+                                        log.Warn("OrgUnit " + registration.Uuid + " points to a ContactPlace (" + cp + ") that does not have a ContactPlace OrgunitFunction for it");
+                                    }
+                                }
+                            }
+
+                            // and which ones should we remove?
+                            foreach (var fot in existingFunctionDetails)
+                            {
+                                if (fot.Registrering == null || fot.Registrering.Length == 0)
+                                {
+                                    continue;
+                                }
+
+                                string functionTypeUuid = fot.Registrering[0].RelationListe.Funktionstype?.ReferenceID?.Item;
+                                if (!UUIDConstants.ORGFUN_CONTACT_UNIT.Equals(functionTypeUuid))
+                                {
+                                    continue;
+                                }
+
+                                bool found = false;
+                                foreach (var cpFunUuid in contactPlaceFunctionUuids)
+                                {
+                                    if (cpFunUuid.Equals(fot.ObjektType.UUIDIdentifikator))
+                                    {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!found)
+                                {
+                                    orgUnitData.OrgFunctionsToRemove.Add(fot.ObjektType.UUIDIdentifikator);
+                                }
+                            }
+                        }
+                        #endregion
+
+                        #region Update payout units
+                        if (!registry.DisableUdbetalingsenheder())
+                        {
+                            string payoutUnitFunctionUuid = null;
+
+                            // if this unit handles payouts on behalf of a payout unit, create a reference to that payout unit
+                            if (!string.IsNullOrEmpty(registration.PayoutUnitUuid))
+                            {
+                                payoutUnitFunctionUuid = ServiceHelper.EnsurePayoutUnitFunctionExists(registration.PayoutUnitUuid, registration.Timestamp);
+
+                                orgUnitData.OrgFunctionsToAdd.Add(payoutUnitFunctionUuid);
+                            }
+
+                            // cleanup any other
+                            foreach (var fot in existingFunctionDetails)
+                            {
+                                if (fot.Registrering == null || fot.Registrering.Length == 0)
+                                {
+                                    continue;
+                                }
+
+                                string functionTypeUuid = fot.Registrering[0].RelationListe.Funktionstype?.ReferenceID?.Item;
+                                if (!UUIDConstants.ORGFUN_PAYOUT_UNIT.Equals(functionTypeUuid))
+                                {
+                                    continue;
+                                }
+
+                                if (payoutUnitFunctionUuid == null || !payoutUnitFunctionUuid.Equals(fot.ObjektType.UUIDIdentifikator))
+                                {
+                                    orgUnitData.OrgFunctionsToRemove.Add(fot.ObjektType.UUIDIdentifikator);
+                                }
+                            }
+                        }
+                        #endregion
                     }
-                    #endregion
 
                     ServiceHelper.UpdateManager(registration);
 
                     organisationEnhedStub.Ret(orgUnitData);
 
                     // ensure "henvendelsessted" tasks are updated
-                    if (!OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder)
+                    if (!OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder())
                     {
                         ServiceHelper.UpdateContactForTasks(registration.Uuid, registration.ContactForTasks, registration.Timestamp);
                     }
@@ -155,7 +271,7 @@ namespace Organisation.BusinessLayer
         private List<AddressRelation> UpdateAddresses(OrgUnitRegistration registration, global::IntegrationLayer.OrganisationEnhed.RegistreringType1 result)
         {
             // check what already exists in Organisation - and store the UUIDs of the existing addresses, we will need those later
-            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null, orgDtrIdUuid = null, orgLOSShortNameUuid = null, orgEanUuid = null, orgContactHoursUuid = null, orgPhoneHoursUuid = null, orgPostUuid = null, orgPostReturnUuid = null, orgContactUuid = null, orgEmailRemarksUuid = null, orgLandlineUuid = null, orgUrlUuid = null, orgLosIdUuid = null;
+            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null, orgDtrIdUuid = null, orgLOSShortNameUuid = null, orgEanUuid = null, orgContactHoursUuid = null, orgPhoneHoursUuid = null, orgPostUuid = null, orgPostReturnUuid = null, orgContactUuid = null, orgEmailRemarksUuid = null, orgLandlineUuid = null, orgUrlUuid = null, orgLosIdUuid = null, orgFOAUuid = null, orgPNRUuid = null, orgSORUuid = null;
 
             if (result.RelationListe.Adresser != null)
             {
@@ -220,6 +336,18 @@ namespace Organisation.BusinessLayer
                     else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_EMAIL_REMARKS))
                     {
                         orgEmailRemarksUuid = orgAddress.ReferenceID.Item;
+                    }
+                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_FOA))
+                    {
+                        orgFOAUuid = orgAddress.ReferenceID.Item;
+                    }
+                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_PNR))
+                    {
+                        orgPNRUuid = orgAddress.ReferenceID.Item;
+                    }
+                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_SOR))
+                    {
+                        orgSORUuid = orgAddress.ReferenceID.Item;
                     }
                 }
             }
@@ -375,6 +503,36 @@ namespace Organisation.BusinessLayer
                 {
                     Uuid = uuid,
                     Type = AddressRelationType.POST
+                });
+            }
+
+            ServiceHelper.UpdateAddress(registration.FOA, orgFOAUuid, registration.Timestamp, out uuid);
+            if (uuid != null)
+            {
+                addressRefs.Add(new AddressRelation()
+                {
+                    Uuid = uuid,
+                    Type = AddressRelationType.FOA
+                });
+            }
+
+            ServiceHelper.UpdateAddress(registration.PNR, orgPNRUuid, registration.Timestamp, out uuid);
+            if (uuid != null)
+            {
+                addressRefs.Add(new AddressRelation()
+                {
+                    Uuid = uuid,
+                    Type = AddressRelationType.PNR
+                });
+            }
+
+            ServiceHelper.UpdateAddress(registration.SOR, orgSORUuid, registration.Timestamp, out uuid);
+            if (uuid != null)
+            {
+                addressRefs.Add(new AddressRelation()
+                {
+                    Uuid = uuid,
+                    Type = AddressRelationType.SOR
                 });
             }
 
@@ -582,6 +740,45 @@ namespace Organisation.BusinessLayer
                 }
             }
 
+            if (!string.IsNullOrEmpty(registration.FOA))
+            {
+                ServiceHelper.ImportAddress(registration.FOA, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.FOA
+                    });
+                }
+            }
+
+            if (!string.IsNullOrEmpty(registration.PNR))
+            {
+                ServiceHelper.ImportAddress(registration.PNR, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.PNR
+                    });
+                }
+            }
+
+            if (!string.IsNullOrEmpty(registration.SOR))
+            {
+                ServiceHelper.ImportAddress(registration.SOR, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.SOR
+                    });
+                }
+            }
+
             return addressRefs;
         }
 
@@ -619,7 +816,7 @@ namespace Organisation.BusinessLayer
 
             OrgUnitRegistration registration = null;
 
-            var ou = inspectorService.ReadOUObject(uuid, ReadTasks.YES, ReadManager.YES, ReadAddresses.YES, ReadPayoutUnit.YES, ReadPositions.NO, ReadContactForTasks.YES);
+            var ou = inspectorService.ReadOUObject(uuid, ReadTasks.YES, ReadManager.YES, ReadAddresses.YES, ReadPayoutUnit.YES, ReadContactPlaces.YES, ReadPositions.NO, ReadContactForTasks.YES);
             if (ou != null)
             {
                 registration = new OrgUnitRegistration();
@@ -632,7 +829,9 @@ namespace Organisation.BusinessLayer
                 registration.Uuid = uuid;
                 registration.ManagerUuid = ou.Manager.Uuid;
                 registration.Tasks = ou.Tasks;
+                registration.ItSystems = ou.ItSystems;
                 registration.ContactForTasks = ou.ContactForTasks;
+                registration.ContactPlaces = ou.ContactPlaces;
 
                 foreach (var address in ou.Addresses)
                 {
@@ -696,6 +895,18 @@ namespace Organisation.BusinessLayer
                     {
                         registration.Post = address.Value;
                     }
+                    else if (address is DTO.Read.FOA)
+                    {
+                        registration.FOA = address.Value;
+                    }
+                    else if (address is DTO.Read.PNR)
+                    {
+                        registration.PNR = address.Value;
+                    }
+                    else if (address is DTO.Read.SOR)
+                    {
+                        registration.SOR = address.Value;
+                    }
                     else
                     {
                         log.Warn("Trying to Read OrgUnit " + uuid + " with unknown address type " + address.GetType().ToString());
@@ -724,6 +935,7 @@ namespace Organisation.BusinessLayer
             organisationEnhed.Uuid = registration.Uuid;
             organisationEnhed.ParentOrgUnitUuid = registration.ParentOrgUnitUuid;
             organisationEnhed.Tasks = registration.Tasks;
+            organisationEnhed.ItSystemUuids = registration.ItSystems;
 
             switch (registration.Type)
             {
@@ -754,22 +966,17 @@ namespace Organisation.BusinessLayer
                 errors.Add("uuid");
             }
 
-            if (registration.Timestamp == null)
-            {
-                errors.Add("timestamp");
-            }
-
             if (errors.Count > 0)
             {
                 throw new InvalidFieldsException("Invalid registration object - the following fields are invalid: " + string.Join(",", errors));
             }
 
-            if (OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder)
+            if (OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder())
             {
                 registration.ContactForTasks = new List<string>();
             }
 
-            if (OrganisationRegistryProperties.GetInstance().DisableUdbetalingsenheder)
+            if (OrganisationRegistryProperties.GetInstance().DisableUdbetalingsenheder())
             {
                 registration.PayoutUnitUuid = null;
             }

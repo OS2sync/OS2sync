@@ -36,11 +36,13 @@ namespace Organisation.SchedulingLayer
                             command.Parameters.Add(DaoUtil.GetParameter("@shortkey", user.ShortKey ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@user_id", user.UserId ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@phone_number", user.PhoneNumber ?? (object)DBNull.Value));
+                            command.Parameters.Add(DaoUtil.GetParameter("@landline", user.Landline ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@name", user.Person.Name ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@cpr", user.Person.Cpr ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@email", user.Email ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@racfid", user.RacfID ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@location", user.Location ?? (object)DBNull.Value));
+                            command.Parameters.Add(DaoUtil.GetParameter("@fmk_id", user.FMKID ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@cvr", cvr));
                             command.Parameters.Add(DaoUtil.GetParameter("@operation", operation.ToString()));
 
@@ -57,8 +59,8 @@ namespace Organisation.SchedulingLayer
                                 command.Parameters.Add(DaoUtil.GetParameter("@user_id", user_id));
                                 command.Parameters.Add(DaoUtil.GetParameter("@name", position.Name));
                                 command.Parameters.Add(DaoUtil.GetParameter("@orgunit_uuid", position.OrgUnitUuid));
-                                command.Parameters.Add(DaoUtil.GetParameter("@start_date", position.StartDate));
-                                command.Parameters.Add(DaoUtil.GetParameter("@stop_date", position.StopDate));
+                                command.Parameters.Add(DaoUtil.GetParameter("@start_date", position.StartDate ?? (object)DBNull.Value));
+                                command.Parameters.Add(DaoUtil.GetParameter("@stop_date", position.StopDate ?? (object)DBNull.Value));
                                 command.ExecuteNonQuery();
                             }
                         }
@@ -94,9 +96,11 @@ namespace Organisation.SchedulingLayer
                             user.Id = user_id;
 
                             user.PhoneNumber = GetValue(reader, "phone_number");
+                            user.Landline = GetValue(reader, "landline");
                             user.Email = GetValue(reader, "email");
                             user.RacfID = GetValue(reader, "racfid");
                             user.Location = GetValue(reader, "location");
+                            user.FMKID = GetValue(reader, "fmk_id");
 
                             user.UserId = GetValue(reader, "user_id");
                             user.Cvr = GetValue(reader, "cvr");
@@ -117,6 +121,75 @@ namespace Organisation.SchedulingLayer
                 {
                     // read positions
                     using (DbCommand command = DaoUtil.GetCommand(UserStatements.SelectPositions, connection))
+                    {
+                        command.Parameters.Add(DaoUtil.GetParameter("@id", user.Id));
+
+                        using (DbDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                Position position = new Position();
+                                position.OrgUnitUuid = GetValue(reader, "orgunit_uuid");
+                                position.Name = GetValue(reader, "name");
+                                position.StartDate = GetValue(reader, "start_date");
+                                position.StopDate = GetValue(reader, "stop_date");
+
+                                user.Positions.Add(position);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return users;
+        }
+
+        public List<UserRegistrationExtended> GetSuccessEntries(String uuid)
+        {
+            var users = new List<UserRegistrationExtended>();
+
+            using (DbConnection connection = DaoUtil.GetConnection())
+            {
+                connection.Open();
+
+                using (DbCommand command = DaoUtil.GetCommand(UserStatements.SelectSuccess, connection))
+                {
+                    command.Parameters.Add(DaoUtil.GetParameter("@uuid", uuid));
+
+                    using (DbDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            UserRegistrationExtended user = new UserRegistrationExtended();
+                            long user_id = (long)reader["id"];
+                            user.Id = user_id;
+
+                            user.PhoneNumber = GetValue(reader, "phone_number");
+                            user.Landline = GetValue(reader, "landline");
+                            user.Email = GetValue(reader, "email");
+                            user.RacfID = GetValue(reader, "racfid");
+                            user.Location = GetValue(reader, "location");
+                            user.FMKID = GetValue(reader, "fmk_id");
+
+                            user.UserId = GetValue(reader, "user_id");
+                            user.Cvr = GetValue(reader, "cvr");
+                            user.Uuid = GetValue(reader, "uuid");
+                            user.ShortKey = GetValue(reader, "shortkey");
+
+                            user.Person.Name = GetValue(reader, "name");
+                            user.Person.Cpr = GetValue(reader, "cpr");
+                            user.Timestamp = (DateTime)reader["timestamp"];
+                            user.Operation = (OperationType)Enum.Parse(typeof(OperationType), GetValue(reader, "operation"));
+
+                            users.Add(user);
+                        }
+                    }
+                }
+
+                foreach (var user in users)
+                {
+                    // read positions
+                    using (DbCommand command = DaoUtil.GetCommand(UserStatements.SelectSuccessPositions, connection))
                     {
                         command.Parameters.Add(DaoUtil.GetParameter("@id", user.Id));
 

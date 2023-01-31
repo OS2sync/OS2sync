@@ -34,12 +34,8 @@ namespace Organisation.IntegrationLayer
             helper.AddAddressReferences(unit.Addresses, virkning, registration);
             helper.AddOrganisationRelation(StubUtil.GetMunicipalityOrganisationUUID(), virkning, registration);
             helper.AddOverordnetEnhed(unit.ParentOrgUnitUuid, virkning, registration);
-
-            // TODO: if we ever have other functions for OrgUnits than payout units, this solution will not work
-            if (!registry.DisableUdbetalingsenheder)
-            {
-                helper.AddTilknyttedeFunktioner(unit.OrgFunctionUuids, virkning, registration);
-            }
+            helper.AddItSystemer(unit.ItSystemUuids, virkning, registration);
+            helper.AddTilknyttedeFunktioner(unit.OrgFunctionsToAdd, virkning, registration);
 
             helper.AddOpgaver(unit.Tasks, virkning, registration);
 
@@ -67,6 +63,12 @@ namespace Organisation.IntegrationLayer
                 int statusCode = Int32.Parse(result.ImporterResponse1.ImportOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
+                    if (statusCode == 49)
+                    {
+                        log.Warn("Importer failed on OrgUnit " + unit.Uuid + " as Organisation returned status 49. The most likely cause is that the object has already been imported");
+                        return;
+                    }
+
                     string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Import", OrganisationEnhedStubHelper.SERVICE, result.ImporterResponse1.ImportOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
@@ -111,9 +113,9 @@ namespace Organisation.IntegrationLayer
 
                 // compare latest property to the local object
                 EgenskabType latestProperty = StubUtil.GetLatestProperty(input.AttributListe.Egenskab);
-                if (latestProperty == null || !latestProperty.EnhedNavn.Equals(unit.Name) || (unit.ShortKey != null && !latestProperty.BrugervendtNoegleTekst.Equals(unit.ShortKey)))
+                if (latestProperty == null || latestProperty.EnhedNavn == null || latestProperty.BrugervendtNoegleTekst == null || !latestProperty.EnhedNavn.Equals(unit.Name) || (unit.ShortKey != null && !latestProperty.BrugervendtNoegleTekst.Equals(unit.ShortKey)))
                 {
-                    if (latestProperty == null)
+                    if (latestProperty == null || latestProperty.EnhedNavn == null || latestProperty.BrugervendtNoegleTekst == null)
                     {
                         EnsureKeys(unit);
                     }
@@ -128,6 +130,13 @@ namespace Organisation.IntegrationLayer
                     input.AttributListe.Egenskab = new EgenskabType[1];
                     input.AttributListe.Egenskab[0] = newProperty;
 
+                    changes = true;
+                }
+                #endregion
+
+                #region Update itSystemer relationships
+                if (helper.UpdateItSystemer(unit.ItSystemUuids, virkning, registration, unit.Timestamp))
+                {
                     changes = true;
                 }
                 #endregion
@@ -206,6 +215,15 @@ namespace Organisation.IntegrationLayer
                                         break;
                                     case AddressRelationType.PHONE_OPEN_HOURS:
                                         roleUuid = UUIDConstants.ADDRESS_ROLE_ORGUNIT_PHONE_OPEN_HOURS;
+                                        break;
+                                    case AddressRelationType.FOA:
+                                        roleUuid = UUIDConstants.ADDRESS_ROLE_ORGUNIT_FOA;
+                                        break;
+                                    case AddressRelationType.PNR:
+                                        roleUuid = UUIDConstants.ADDRESS_ROLE_ORGUNIT_PNR;
+                                        break;
+                                    case AddressRelationType.SOR:
+                                        roleUuid = UUIDConstants.ADDRESS_ROLE_ORGUNIT_SOR;
                                         break;
                                     default:
                                         log.Warn("Cannot add relationship to address of type " + addressInLocal.Type + " with uuid " + addressInLocal.Uuid + " as the type is unknown");
@@ -296,43 +314,41 @@ namespace Organisation.IntegrationLayer
                 }
                 #endregion
 
-                #region Update function references (PayoutUnits)
-                // TODO: if we ever have other functions for OrgUnits than payout units, this solution will not work
-                if (!registry.DisableUdbetalingsenheder)
+                #region Update function references
+                // set stopDate on all supplied functions that must be removed
+                if (StubUtil.TerminateObjectsInOrgFromUuidList(input.RelationListe.TilknyttedeFunktioner, unit.OrgFunctionsToRemove, unit.Timestamp))
                 {
+                    changes = true;
+                }
 
-                    // terminate the Virkning on all functions (currently there is only one, the payout unit, but this will work for all kinds of functions)
-                    changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.TilknyttedeFunktioner, unit.OrgFunctionUuids, unit.Timestamp, false) || changes;
+                // add references to function objects that are new
+                List<string> functionUuidsToAdd = StubUtil.FindAllObjectsInLocalNotInOrg(input.RelationListe.TilknyttedeFunktioner, unit.OrgFunctionsToAdd, false);
 
-                    // add references to function objects that are new
-                    List<string> functionUuidsToAdd = StubUtil.FindAllObjectsInLocalNotInOrg(input.RelationListe.TilknyttedeFunktioner, unit.OrgFunctionUuids, false);
+                if (functionUuidsToAdd.Count > 0)
+                {
+                    int size = functionUuidsToAdd.Count + ((input.RelationListe.TilknyttedeFunktioner != null) ? input.RelationListe.TilknyttedeFunktioner.Length : 0);
+                    OrganisationFunktionFlerRelationType[] newFunctions = new OrganisationFunktionFlerRelationType[size];
 
-                    if (functionUuidsToAdd.Count > 0)
+                    int i = 0;
+                    if (input.RelationListe.TilknyttedeFunktioner != null)
                     {
-                        int size = functionUuidsToAdd.Count + ((input.RelationListe.TilknyttedeFunktioner != null) ? input.RelationListe.TilknyttedeFunktioner.Length : 0);
-                        OrganisationFunktionFlerRelationType[] newFunctions = new OrganisationFunktionFlerRelationType[size];
-
-                        int i = 0;
-                        if (input.RelationListe.TilknyttedeFunktioner != null)
+                        foreach (var functionsInOrg in input.RelationListe.TilknyttedeFunktioner)
                         {
-                            foreach (var functionsInOrg in input.RelationListe.TilknyttedeFunktioner)
-                            {
-                                newFunctions[i++] = functionsInOrg;
-                            }
+                            newFunctions[i++] = functionsInOrg;
                         }
-
-                        foreach (string uuidToAdd in functionUuidsToAdd)
-                        {
-                            OrganisationFunktionFlerRelationType newFunction = new OrganisationFunktionFlerRelationType();
-                            newFunction.ReferenceID = StubUtil.GetReference<UnikIdType>(uuidToAdd, ItemChoiceType.UUIDIdentifikator);
-                            newFunction.Virkning = virkning;
-
-                            newFunctions[i++] = newFunction;
-                        }
-
-                        input.RelationListe.TilknyttedeFunktioner = newFunctions;
-                        changes = true;
                     }
+
+                    foreach (string uuidToAdd in functionUuidsToAdd)
+                    {
+                        OrganisationFunktionFlerRelationType newFunction = new OrganisationFunktionFlerRelationType();
+                        newFunction.ReferenceID = StubUtil.GetReference<UnikIdType>(uuidToAdd, ItemChoiceType.UUIDIdentifikator);
+                        newFunction.Virkning = virkning;
+
+                        newFunctions[i++] = newFunction;
+                    }
+
+                    input.RelationListe.TilknyttedeFunktioner = newFunctions;
+                    changes = true;
                 }
                 #endregion
 
@@ -482,6 +498,15 @@ namespace Organisation.IntegrationLayer
                     foreach (OrganisationFunktionFlerRelationType funktion in input.RelationListe.TilknyttedeFunktioner)
                     {
                         StubUtil.TerminateVirkning(funktion.Virkning, timestamp);
+                    }
+                }
+
+                // cut relationship to all ItSystemer
+                if (input.RelationListe.TilknyttedeItSystemer != null && input.RelationListe.TilknyttedeItSystemer.Length > 0)
+                {
+                    foreach (var itSystem in input.RelationListe.TilknyttedeItSystemer)
+                    {
+                        StubUtil.TerminateVirkning(itSystem.Virkning, timestamp);
                     }
                 }
 

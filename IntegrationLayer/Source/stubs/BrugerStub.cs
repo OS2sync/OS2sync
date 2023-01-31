@@ -58,6 +58,12 @@ namespace Organisation.IntegrationLayer
                 int statusCode = Int32.Parse(response.ImporterResponse1.ImportOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
+                    if (statusCode == 49)
+                    {
+                        log.Warn("Importer failed on Bruger " + user.Uuid + " as Organisation returned status 49. The most likely cause is that the object has been imported");
+                        return;
+                    }
+
                     string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Import", BrugerStubHelper.SERVICE, response.ImporterResponse1.ImportOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
 
@@ -159,10 +165,14 @@ namespace Organisation.IntegrationLayer
 
                 // compare latest property to the local object
                 EgenskabType latestProperty = StubUtil.GetLatestProperty(input.AttributListe.Egenskab);
-                if (!string.Equals(latestProperty?.BrugerNavn, user.UserId) || (!string.IsNullOrEmpty(user.ShortKey) && !string.Equals(latestProperty?.BrugervendtNoegleTekst, user.ShortKey)))
+                if (latestProperty == null ||
+                    latestProperty.BrugerNavn == null ||
+                    latestProperty.BrugervendtNoegleTekst == null ||
+                    !string.Equals(latestProperty.BrugerNavn, user.UserId) ||
+                   (!string.IsNullOrEmpty(user.ShortKey) && !string.Equals(latestProperty.BrugervendtNoegleTekst, user.ShortKey)))
                 {
                     // end the validity of open-ended property
-                    if (latestProperty == null)
+                    if (latestProperty == null || latestProperty.BrugervendtNoegleTekst == null)
                     {
                         // create ShortKey if not supplied
                         EnsureKeys(user);
@@ -171,7 +181,13 @@ namespace Organisation.IntegrationLayer
                     // create a new property
                     EgenskabType newProperty = new EgenskabType();
                     newProperty.Virkning = helper.GetVirkning(user.Timestamp);
-                    newProperty.BrugervendtNoegleTekst = ((!string.IsNullOrEmpty(user.ShortKey)) ? user.ShortKey : latestProperty.BrugervendtNoegleTekst);
+
+                    newProperty.BrugervendtNoegleTekst = !string.IsNullOrEmpty(user.ShortKey)
+                        ? user.ShortKey
+                        : (!string.IsNullOrEmpty(latestProperty.BrugervendtNoegleTekst)
+                            ? latestProperty.BrugervendtNoegleTekst
+                            : IdUtil.GenerateShortKey());
+
                     newProperty.BrugerNavn = user.UserId;
 
                     // create a new set of properties
@@ -221,8 +237,14 @@ namespace Organisation.IntegrationLayer
                                     case AddressRelationType.LOCATION:
                                         roleUuid = UUIDConstants.ADDRESS_ROLE_USER_LOCATION;
                                         break;
+                                    case AddressRelationType.LANDLINE:
+                                        roleUuid = UUIDConstants.ADDRESS_ROLE_USER_LANDLINE;
+                                        break;
                                     case AddressRelationType.RACFID:
                                         roleUuid = UUIDConstants.ADDRESS_ROLE_USER_RACFID;
+                                        break;
+                                    case AddressRelationType.FMKID:
+                                        roleUuid = UUIDConstants.ADDRESS_ROLE_USER_FMKID;
                                         break;
                                     default:
                                         log.Warn("Cannot add relationship to address of type " + addressInLocal.Type + " with uuid " + addressInLocal.Uuid + " as the type is unknown");
@@ -340,6 +362,11 @@ namespace Organisation.IntegrationLayer
             }
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
             {
+                // temporary fix until we figure out why this happens
+                if (ex.Message.Contains("Fault occurred while processing")) {
+                    throw;
+                }
+                
                 throw new ServiceNotFoundException("Failed to establish connection to the Ret service on Bruger", ex);
             }
         }

@@ -33,23 +33,8 @@ namespace Organisation.BusinessLayer.TestDriver
         {
             InitEnvironment();
 
-            OrgUnitRegistration registration = OUReg();
-            registration.Name = "Testenhed til Opgaver";
-            registration.ParentOrgUnitUuid = Uuid();
-            registration.Tasks = new List<string>();
-            registration.Tasks.Add("407a84c9-5347-4871-9842-fa7a5f8fe607");
-            registration.Tasks.Add("dbb1b318-3c85-11e3-9b13-0050c2490048");
-            registration.Tasks.Add("1b72daba-5e77-4512-a92e-5e4ca9950a35");
-            orgUnitService.Update(registration);
-
-            var ou = inspectorService.ReadOUObject(registration.Uuid);
-
-            registration.Name = "Navneændring";
-            orgUnitService.Update(registration);
-
-            ou = inspectorService.ReadOUObject(registration.Uuid);
-
             /* ordinary tests
+            TestItSystems();
             TestListAndReadOUs();
             TestListAndReadUsers();
             TestCreateAndUpdateFullUser();
@@ -59,12 +44,52 @@ namespace Organisation.BusinessLayer.TestDriver
             TestUpdateWithoutChanges();
             TestPayoutUnits();
             TestPositions();
-//            TestContactPlaces();
+            TestContactPlaces();
             TestUpdateAndSearch();
             TestMultipleAddresses();
             */
 
             System.Environment.Exit(0);
+        }
+
+        private static void TestItSystems()
+        {
+            var reg = OUReg();
+            orgUnitService.Update(reg);
+
+            var ou = orgUnitService.Read(reg.Uuid);
+            if (ou.ItSystems.Count != 0)
+            {
+                throw new Exception("Unexpected amount of it-systems");
+            }
+
+            string uuid1 = Guid.NewGuid().ToString().ToLower();
+            string uuid2 = Guid.NewGuid().ToString().ToLower();
+            string uuid3 = Guid.NewGuid().ToString().ToLower();
+            string uuid4 = Guid.NewGuid().ToString().ToLower();
+
+            reg.ItSystems = new List<string>();
+            reg.ItSystems.Add(uuid1);
+            reg.ItSystems.Add(uuid2);
+            orgUnitService.Update(reg);
+
+            ou = orgUnitService.Read(reg.Uuid);
+            if (ou.ItSystems.Count != 2)
+            {
+                throw new Exception("Unexpected amount of it-systems");
+            }
+
+            reg.ItSystems = new List<string>();
+            reg.ItSystems.Add(uuid2);
+            reg.ItSystems.Add(uuid3);
+            reg.ItSystems.Add(uuid4);
+            orgUnitService.Update(reg);
+
+            ou = orgUnitService.Read(reg.Uuid);
+            if (ou.ItSystems.Count != 3)
+            {
+                throw new Exception("Unexpected amount of it-systems");
+            }
         }
 
         private static void TestMultipleAddresses()
@@ -594,6 +619,7 @@ namespace Organisation.BusinessLayer.TestDriver
             user.Person.Name = "Søren Sørensen";
             user.UserId = "ssø";
             user.PhoneNumber = "12345678";
+            user.Landline = "87654321";
             position = new Position();
             user.Positions.Add(position);
             position.Name = "Sagsbehandler";
@@ -766,6 +792,9 @@ namespace Organisation.BusinessLayer.TestDriver
             registration.PhoneNumber = "PhoneValue";
             registration.PhoneOpenHours = "PhoneOpenHoursValue";
             registration.Post = "PostValue";
+            registration.FOA = "FOAValue";
+            registration.PNR = "PNRValue";
+            registration.SOR = "SORValue";
             orgUnitService.Update(registration);
 
             var ou = inspectorService.ReadOUObject(registration.Uuid);
@@ -785,6 +814,9 @@ namespace Organisation.BusinessLayer.TestDriver
             registration.PhoneNumber = "PhoneValue2";
             registration.PhoneOpenHours = "PhoneOpenHoursValue2";
             registration.Post = "PostValue2";
+            registration.FOA = "FOAValue2";
+            registration.PNR = "PNRValue2";
+            registration.SOR = "SORValue2";
             orgUnitService.Update(registration);
 
             ou = inspectorService.ReadOUObject(registration.Uuid);
@@ -809,6 +841,7 @@ namespace Organisation.BusinessLayer.TestDriver
             registration.Person.Cpr = "0000000000";
             registration.Person.Name = "PersonNameValue";
             registration.PhoneNumber = "PhoneValue";
+            registration.Landline = "LandlineValue";
             Position position = new Position();
             registration.Positions.Add(position);
             position.Name = "PositionNameValue";
@@ -830,6 +863,7 @@ namespace Organisation.BusinessLayer.TestDriver
             registration.Person.Cpr = "0000000001";
             registration.Person.Name = "PersonNameValue2";
             registration.PhoneNumber = "PhoneValue2";
+            registration.Landline = "LandlineValue";
             position = new Position();
             registration.Positions.Clear();
             registration.Positions.Add(position);
@@ -936,6 +970,14 @@ namespace Organisation.BusinessLayer.TestDriver
                 {
                     throw new Exception("Phone is not the same");
                 }
+                else if (address is DTO.Read.Landline && !address.Value.Equals(registration.Landline))
+                {
+                    throw new Exception("Landline is not the same");
+                }
+                else if (address is DTO.Read.FMKID && !address.Value.Equals(registration.FMKID))
+                {
+                    throw new Exception("FMKID is not the same");
+                }
             }
 
         }
@@ -1006,6 +1048,18 @@ namespace Organisation.BusinessLayer.TestDriver
                 else if (address is DTO.Read.ContactHours && !address.Value.Equals(registration.ContactOpenHours))
                 {
                     throw new Exception("ContactHours is not the same");
+                }
+                else if (address is DTO.Read.FOA && !address.Value.Equals(registration.FOA))
+                {
+                    throw new Exception("FOA is not the same");
+                }
+                else if (address is DTO.Read.PNR && !address.Value.Equals(registration.PNR))
+                {
+                    throw new Exception("PNR is not the same");
+                }
+                else if (address is DTO.Read.SOR && !address.Value.Equals(registration.SOR))
+                {
+                    throw new Exception("SOR is not the same");
                 }
             }
         }

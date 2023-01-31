@@ -17,6 +17,7 @@ namespace Organisation.SchedulingLayer
                     try
                     {
                         string location = OrganisationRegistryProperties.GetInstance().MigrationScriptsPath;
+                        log.Info($"Migrations location: {location}");
 
                         if (OrganisationRegistryProperties.GetInstance().Database.Equals(DatabaseType.MSSQL))
                         {
@@ -40,9 +41,9 @@ namespace Organisation.SchedulingLayer
                             evolve.Migrate();
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        throw ex;
+                        throw;
                     }
                 }
             }

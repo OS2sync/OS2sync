@@ -48,11 +48,27 @@ namespace Organisation.SchedulingLayer
             }
         }
 
+        public static string SelectSuccess
+        {
+            get
+            {
+                return SELECT_SUCCESS;
+            }
+        }
+
         public static string SelectPositions
         {
             get
             {
                 return SELECT_POSITIONS;
+            }
+        }
+
+        public static string SelectSuccessPositions
+        {
+            get
+            {
+                return SELECT_SUCCESS_POSITIONS;
             }
         }
 
@@ -89,6 +105,8 @@ namespace Organisation.SchedulingLayer
                 email,
                 racfid,
                 location,
+                fmk_id,
+                landline,
                 name,
                 cpr,
                 cvr,
@@ -104,6 +122,8 @@ namespace Organisation.SchedulingLayer
                 @email,
                 @racfid,
                 @location,
+                @fmk_id,
+                @landline,
                 @name,
                 @cpr,
                 @cvr,
@@ -133,7 +153,11 @@ namespace Organisation.SchedulingLayer
         private const string SELECT_MYSQL = @"SELECT * FROM queue_users ORDER BY timestamp LIMIT 4";
         private const string SELECT_MSSQL = @"SELECT TOP(4) * FROM queue_users ORDER BY timestamp";
 
+        private const string SELECT_SUCCESS = @"SELECT * FROM success_users WHERE uuid = @uuid";
+
         private const string SELECT_POSITIONS = @"SELECT name, orgunit_uuid, start_date, stop_date FROM queue_user_positions WHERE user_id = @id";
+
+        private const string SELECT_SUCCESS_POSITIONS = @"SELECT name, orgunit_uuid, start_date, stop_date FROM success_user_positions WHERE user_id = @id";
 
         private const string DELETE = @"DELETE FROM queue_users WHERE id = @id";
 

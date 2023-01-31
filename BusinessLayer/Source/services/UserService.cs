@@ -164,9 +164,17 @@ namespace Organisation.BusinessLayer
                     {
                         registration.PhoneNumber = address.Value;
                     }
+                    else if (address is DTO.Read.Landline)
+                    {
+                        registration.Landline = address.Value;
+                    }
                     else if (address is DTO.Read.RacfID)
                     {
                         registration.RacfID = address.Value;
+                    }
+                    else if (address is DTO.Read.FMKID)
+                    {
+                        registration.FMKID = address.Value;
                     }
                     else
                     {
@@ -200,6 +208,19 @@ namespace Organisation.BusinessLayer
                     {
                         Uuid = uuid,
                         Type = AddressRelationType.PHONE
+                    });
+                }
+            }
+
+            if (!string.IsNullOrEmpty(registration.Landline))
+            {
+                ServiceHelper.ImportAddress(registration.Landline, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.LANDLINE
                     });
                 }
             }
@@ -243,13 +264,26 @@ namespace Organisation.BusinessLayer
                 }
             }
 
+            if (!string.IsNullOrEmpty(registration.FMKID))
+            {
+                ServiceHelper.ImportAddress(registration.FMKID, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.FMKID
+                    });
+                }
+            }
+
             return addressRefs;
         }
 
         private List<AddressRelation> UpdateAddresses(UserRegistration registration, global::IntegrationLayer.Bruger.RegistreringType1 result)
         {
             // check what already exists in Organisation - and store the UUIDs of the existing addresses, we will need those later
-            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null, orgRacfIDUuid = null;
+            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null, orgRacfIDUuid = null, orgLandlineUuid = null, orgFMKIDUuid = null;
 
             if (result.RelationListe.Adresser != null)
             {
@@ -258,6 +292,10 @@ namespace Organisation.BusinessLayer
                     if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_PHONE))
                     {
                         orgPhoneUuid = orgAddress.ReferenceID.Item;
+                    }
+                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_LANDLINE))
+                    {
+                        orgLandlineUuid = orgAddress.ReferenceID.Item;
                     }
                     else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_EMAIL))
                     {
@@ -270,6 +308,10 @@ namespace Organisation.BusinessLayer
                     else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_RACFID))
                     {
                         orgRacfIDUuid = orgAddress.ReferenceID.Item;
+                    }
+                    else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_USER_FMKID))
+                    {
+                        orgFMKIDUuid = orgAddress.ReferenceID.Item;
                     }
                 }
             }
@@ -285,6 +327,16 @@ namespace Organisation.BusinessLayer
                 {
                     Uuid = uuid,
                     Type = AddressRelationType.PHONE
+                });
+            }
+
+            ServiceHelper.UpdateAddress(registration.Landline, orgLandlineUuid, registration.Timestamp, out uuid);
+            if (uuid != null)
+            {
+                addressRefs.Add(new AddressRelation()
+                {
+                    Uuid = uuid,
+                    Type = AddressRelationType.LANDLINE
                 });
             }
 
@@ -315,6 +367,16 @@ namespace Organisation.BusinessLayer
                 {
                     Uuid = uuid,
                     Type = AddressRelationType.LOCATION
+                });
+            }
+
+            ServiceHelper.UpdateAddress(registration.FMKID, orgFMKIDUuid, registration.Timestamp, out uuid);
+            if (uuid != null)
+            {
+                addressRefs.Add(new AddressRelation()
+                {
+                    Uuid = uuid,
+                    Type = AddressRelationType.FMKID
                 });
             }
 
@@ -364,11 +426,6 @@ namespace Organisation.BusinessLayer
             if (string.IsNullOrEmpty(registration.Uuid))
             {
                 errors.Add("userUuid");
-            }
-
-            if (registration.Timestamp == null)
-            {
-                errors.Add("timestamp");
             }
 
             if (errors.Count > 0)

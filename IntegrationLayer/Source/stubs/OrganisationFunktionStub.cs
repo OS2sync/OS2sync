@@ -112,7 +112,7 @@ namespace Organisation.IntegrationLayer
 
                 #region Update attributes if needed
                 EgenskabType latestProperty = StubUtil.GetLatestProperty(input.AttributListe.Egenskab);
-                if (latestProperty == null || latestProperty.FunktionNavn == null ||
+                if (latestProperty == null || latestProperty.FunktionNavn == null || latestProperty.BrugervendtNoegleTekst == null ||
                    (orgFunction.Name != null && !latestProperty.FunktionNavn.Equals(orgFunction.Name)) ||
                    (orgFunction.ShortKey != null && !latestProperty.BrugervendtNoegleTekst.Equals(orgFunction.ShortKey)))
                 {
@@ -142,10 +142,10 @@ namespace Organisation.IntegrationLayer
                 if (taskIndicator.Equals(UpdateIndicator.COMPARE))
                 {
                     // terminate the Virkning on all address relationships that no longer exists locally
-                    changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.Opgaver, orgFunction.Tasks, orgFunction.Timestamp, true) || changes;
+                    changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.Opgaver, orgFunction.Tasks, orgFunction.Timestamp, false) || changes;
 
                     // add references to address objects that are new
-                    List<string> taskUuidsToAdd = StubUtil.FindAllObjectsInLocalNotInOrg(input.RelationListe.Opgaver, orgFunction.Tasks, true);
+                    List<string> taskUuidsToAdd = StubUtil.FindAllObjectsInLocalNotInOrg(input.RelationListe.Opgaver, orgFunction.Tasks, false);
 
                     if (taskUuidsToAdd.Count > 0)
                     {
@@ -190,7 +190,7 @@ namespace Organisation.IntegrationLayer
                     // terminate the references in Org that no longer exist locally
                     changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.TilknyttedeBrugere, orgFunction.Users, orgFunction.Timestamp, false) || changes;
 
-                    VirkningType unitRelationVirkning = virkning;
+                    VirkningType unitRelationVirkning = virkning;
                     if (orgFunction.FunctionTypeUuid.Equals(UUIDConstants.ORGFUN_POSITION) && !string.IsNullOrEmpty(orgFunction.StartDate))
                     {
                         unitRelationVirkning = helper.GetVirkning(orgFunction.StartDate, orgFunction.StopDate);
@@ -199,26 +199,26 @@ namespace Organisation.IntegrationLayer
                     List<string> uuidsToAdd = new List<string>();
                     foreach (string userUuid in orgFunction.Users)
                     {
-                        bool found = false;
+                        bool found = false;
                         if (input.RelationListe.TilknyttedeBrugere != null)                        {
                             foreach (var tilknyttetBruger in input.RelationListe.TilknyttedeBrugere)
                             {
-                                string tilknyttetBrugerUuid = tilknyttetBruger.ReferenceID?.Item;
+                                string tilknyttetBrugerUuid = tilknyttetBruger.ReferenceID?.Item;
                                 if (userUuid.Equals(tilknyttetBrugerUuid))
                                 {
-                                    found = true;
+                                    found = true;
                                     // detect changes in start/stop dates if values are supplied
                                     if (orgFunction.FunctionTypeUuid.Equals(UUIDConstants.ORGFUN_POSITION) && !string.IsNullOrEmpty(orgFunction.StartDate))
                                     {
-                                        string existingUnitStartDate = null, existingUnitStopDate = null;
+                                        string existingUnitStartDate = null, existingUnitStopDate = null;
                                         if (tilknyttetBruger.Virkning?.FraTidspunkt?.Item is DateTime)
                                         {
                                             existingUnitStartDate = ((DateTime)tilknyttetBruger.Virkning.FraTidspunkt.Item).ToString("yyyy-MM-dd");
-                                        }
+                                        }
                                         if (tilknyttetBruger.Virkning?.TilTidspunkt?.Item is DateTime)
                                         {
                                             existingUnitStopDate = ((DateTime)tilknyttetBruger.Virkning.TilTidspunkt.Item).ToString("yyyy-MM-dd");
-                                        }
+                                        }
                                         if (!string.Equals(orgFunction.StartDate, existingUnitStartDate) || !string.Equals(orgFunction.StopDate, existingUnitStopDate))
                                         {
                                             tilknyttetBruger.Virkning = unitRelationVirkning;
@@ -227,7 +227,7 @@ namespace Organisation.IntegrationLayer
                                     }
                                 }
                             }
-                        }
+                        }
                         // add this one
                         if (!found)
                         {
@@ -795,8 +795,8 @@ namespace Organisation.IntegrationLayer
                     soegInput.RelationListe.TilknyttedeEnheder[0].Virkning = new VirkningType();
                     soegInput.RelationListe.TilknyttedeEnheder[0].Virkning.FraTidspunkt = new TidspunktType();
                     soegInput.RelationListe.TilknyttedeEnheder[0].Virkning.FraTidspunkt.Item = DateTime.Now;
-                    soegInput.RelationListe.TilknyttedeEnheder[0].Virkning.FraTidspunkt = new TidspunktType();
-                    soegInput.RelationListe.TilknyttedeEnheder[0].Virkning.FraTidspunkt.Item = true;
+                    soegInput.RelationListe.TilknyttedeEnheder[0].Virkning.TilTidspunkt = new TidspunktType();
+                    soegInput.RelationListe.TilknyttedeEnheder[0].Virkning.TilTidspunkt.Item = true;
                 }
             }
 
