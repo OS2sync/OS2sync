@@ -21,7 +21,7 @@ namespace Organisation.ServiceLayer
                 BusinessLayer.Initializer.Init();
 
                 // Initialize SchedulingLayer (if enabled)
-                if (IntegrationLayer.OrganisationRegistryProperties.GetInstance().EnableScheduler)
+                if (IntegrationLayer.OrganisationRegistryProperties.AppSettings.SchedulerSettings.Enabled)
                 {
                     SchedulingLayer.SyncJobRunner.InitAsync();
                 }
@@ -34,29 +34,13 @@ namespace Organisation.ServiceLayer
 
         private static IWebHost BuildWebHost()
         {
-            if (IntegrationLayer.OrganisationRegistryProperties.GetInstance().SslEnabled)
-            {
-                return new WebHostBuilder()
-                    .UseKestrel(options =>
-                    {
-                        options.Listen(IPAddress.Any, 5000, listenOptions =>
-                        {
-                            listenOptions.UseHttps(IntegrationLayer.OrganisationRegistryProperties.GetInstance().SslKeystorePath, IntegrationLayer.OrganisationRegistryProperties.GetInstance().SslKeystorePassword);
-                        });
-                    })
-                    .UseContentRoot(Directory.GetCurrentDirectory())
-                    .UseIISIntegration()
-                    .UseStartup<Startup>()
-                    .Build();
-            }
-
-                return new WebHostBuilder()
-                    .UseKestrel()
-                    .UseContentRoot(Directory.GetCurrentDirectory())
-                    .UseIISIntegration()
-                    .UseUrls("http://*:5000")
-                    .UseStartup<Startup>()
-                    .Build();
+            return new WebHostBuilder()
+                .UseKestrel()
+                .UseContentRoot(Directory.GetCurrentDirectory())
+                .UseIISIntegration()
+                .UseUrls("http://*:5000")
+                .UseStartup<Startup>()
+                .Build();
         }
     }
 }

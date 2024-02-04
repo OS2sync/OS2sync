@@ -1,15 +1,17 @@
 ﻿using Organisation.IntegrationLayer;
+using System;
 
 namespace Organisation.SchedulingLayer
 {
     public class UserStatements
     {
+        private static DatabaseType database = "MYSQL".Equals(OrganisationRegistryProperties.AppSettings.SchedulerSettings.DBType) ? DatabaseType.MYSQL : DatabaseType.MSSQL;
+        private static string rows = OrganisationRegistryProperties.AppSettings.SchedulerSettings.Threads.ToString();
+        
         public static string Insert
         {
             get
             {
-                DatabaseType database = OrganisationRegistryProperties.GetInstance().Database;
-
                 switch (database)
                 {
                     case DatabaseType.MSSQL:
@@ -34,8 +36,6 @@ namespace Organisation.SchedulingLayer
         {
             get
             {
-                DatabaseType database = OrganisationRegistryProperties.GetInstance().Database;
-
                 switch (database)
                 {
                     case DatabaseType.MSSQL:
@@ -96,6 +96,22 @@ namespace Organisation.SchedulingLayer
             }
         }
 
+        public static string Cleanup
+        {
+            get
+            {
+                switch (database)
+                {
+                    case DatabaseType.MSSQL:
+                        return CLEANUP_MSSQL;
+                    case DatabaseType.MYSQL:
+                        return CLEANUP_MYSQL;
+                    default:
+                        throw new System.Exception("Unknown database type: " + database);
+                }
+            }
+        }
+
         private const string INSERT_PREFIX = @"
             INSERT INTO queue_users (
                 uuid,
@@ -109,8 +125,10 @@ namespace Organisation.SchedulingLayer
                 landline,
                 name,
                 cpr,
+                bypass_cache,
                 cvr,
-                operation
+                operation,
+                priority
             )";
 
         private const string INSERT_SUFFIX = @"
@@ -126,8 +144,10 @@ namespace Organisation.SchedulingLayer
                 @landline,
                 @name,
                 @cpr,
+                @bypass_cache,
                 @cvr,
-                @operation
+                @operation,
+                @priority
             );
         ";
 
@@ -150,8 +170,21 @@ namespace Organisation.SchedulingLayer
                 @stop_date
             )";
 
-        private const string SELECT_MYSQL = @"SELECT * FROM queue_users ORDER BY timestamp LIMIT 4";
-        private const string SELECT_MSSQL = @"SELECT TOP(4) * FROM queue_users ORDER BY timestamp";
+        private static string SELECT_MYSQL
+        {
+            get
+            {
+                return @"SELECT * FROM queue_users ORDER BY priority, id LIMIT " + rows;
+            }
+        }
+
+        private static string SELECT_MSSQL
+        {
+            get
+            {
+                return @"SELECT TOP(" + rows + ") * FROM queue_users ORDER BY priority, id";
+            }
+        }
 
         private const string SELECT_SUCCESS = @"SELECT * FROM success_users WHERE uuid = @uuid";
 
@@ -162,11 +195,19 @@ namespace Organisation.SchedulingLayer
         private const string DELETE = @"DELETE FROM queue_users WHERE id = @id";
 
         private const string INSERT_ON_SUCCESS = @"
-            INSERT INTO success_users SELECT * FROM queue_users WHERE id = @id;
-            INSERT INTO success_user_positions SELECT * FROM queue_user_positions WHERE user_id = @id;";
+            INSERT INTO success_users (id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, skipped) SELECT id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, @skipped FROM queue_users WHERE id = @id;
+            INSERT INTO success_user_positions (id, user_id, name, orgunit_uuid, start_date, stop_date) SELECT id, user_id, name, orgunit_uuid, start_date, stop_date FROM queue_user_positions WHERE user_id = @id;";
 
         private const string INSERT_ON_FAILURE = @"
-            INSERT INTO failure_users SELECT q.*, @error FROM queue_users q WHERE id = @id;
-            INSERT INTO failure_user_positions SELECT * FROM queue_user_positions WHERE user_id = @id;";
+            INSERT INTO failure_users (id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, error) SELECT id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, @error FROM queue_users q WHERE id = @id;
+            INSERT INTO failure_user_positions (id, user_id, name, orgunit_uuid, start_date, stop_date) SELECT id, user_id, name, orgunit_uuid, start_date, stop_date FROM queue_user_positions WHERE user_id = @id;";
+
+        private const string CLEANUP_MYSQL = @"
+            DELETE FROM success_users WHERE timestamp <= CURRENT_DATE() - INTERVAL 1 WEEK;
+        ";
+
+        private const string CLEANUP_MSSQL = @"
+            DELETE FROM success_users WHERE timestamp <= GETDATE() - 7;
+        ";
     }
 }

@@ -419,9 +419,9 @@ namespace Organisation.BusinessLayer
             {
                 var existingFunction = existingFunctions[0];
 
-                if (existingFunction.Registrering.Length > 0 && existingFunction.Registrering[0].RelationListe?.Opgaver != null)
+                if (existingFunction.Registrering.Length > 0 && existingFunction.Registrering[0].RelationListe?.TilknyttedeOpgaver != null)
                 {
-                    var opgaver = existingFunction.Registrering[0].RelationListe.Opgaver;
+                    var opgaver = existingFunction.Registrering[0].RelationListe.TilknyttedeOpgaver;
 
                     foreach (var opgave in opgaver)
                     {

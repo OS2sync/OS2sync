@@ -10,55 +10,28 @@ namespace Organisation.IntegrationLayer
     {
         private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private OrganisationStubHelper helper = new OrganisationStubHelper();
-        private OrganisationRegistryProperties registry = OrganisationRegistryProperties.GetInstance();
-
-        public void Soeg()
-        {
-            SoegInputType1 input = new SoegInputType1();
-            //input.SoegVirkning = new SoegVirkningType();
-            input.AttributListe = new AttributListeType();
-            input.RelationListe = new RelationListeType();
-            input.TilstandListe = new TilstandListeType();
-
-            soegRequest request = new soegRequest();
-            request.SoegRequest1 = new SoegRequestType();
-            request.SoegRequest1.SoegInput = input;
-            request.SoegRequest1.AuthorityContext = new AuthorityContextType();
-            request.SoegRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
-
-            OrganisationPortType channel = StubUtil.CreateChannel<OrganisationPortType>(OrganisationStubHelper.SERVICE, "Soeg", helper.CreatePort());
-
-            try
-            {
-                channel.soeg(request);
-            }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
-            {
-                throw new ServiceNotFoundException("Failed to establish connection to the Laes service on Organisation", ex);
-            }
-        }
 
         public void Ret(string overordnetUuid)
         {
-            log.Debug("Attempting Ret on Organisation with uuid " + registry.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()]);
+            log.Debug("Attempting Ret on Organisation with uuid " + OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()]);
 
-            RegistreringType1 registration = GetLatestRegistration(registry.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()]);
+            RegistreringType1 registration = GetLatestRegistration(OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()]);
             if (registration == null)
             {
-                log.Info("Cannot call Ret on Organisation with uuid " + registry.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] + " because it does not exist in Organisation");
+                log.Info("Cannot call Ret on Organisation with uuid " + OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] + " because it does not exist in Organisation");
                 return;
             }
 
             VirkningType virkning = helper.GetVirkning(DateTime.Now);
 
-            OrganisationPortType channel = StubUtil.CreateChannel<OrganisationPortType>(OrganisationStubHelper.SERVICE, "Ret", helper.CreatePort());
+            OrganisationPortType channel = StubUtil.CreateChannel<OrganisationPortType>(OrganisationStubHelper.SERVICE, "Ret");
 
             try
             {
                 bool changes = false;
 
                 RetInputType1 input = new RetInputType1();
-                input.UUIDIdentifikator = registry.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()];
+                input.UUIDIdentifikator = OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()];
                 input.AttributListe = registration.AttributListe;
                 input.TilstandListe = registration.TilstandListe;
                 input.RelationListe = registration.RelationListe;
@@ -91,28 +64,25 @@ namespace Organisation.IntegrationLayer
                 // if no changes are made, we do not call the service
                 if (!changes)
                 {
-                    log.Debug("Ret on Organisation with uuid " + registry.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] + " cancelled because of no changes");
+                    log.Debug("Ret on Organisation with uuid " + OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] + " cancelled because of no changes");
                     return;
                 }
 
                 // send Ret request
                 retRequest request = new retRequest();
-                request.RetRequest1 = new RetRequestType();
-                request.RetRequest1.RetInput = input;
-                request.RetRequest1.AuthorityContext = new AuthorityContextType();
-                request.RetRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+                request.RetInput = input;
 
-                retResponse response = channel.ret(request);
+                retResponse response = channel.retAsync(request).Result;
 
-                int statusCode = Int32.Parse(response.RetResponse1.RetOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(response.RetOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
-                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", OrganisationStubHelper.SERVICE, response.RetResponse1.RetOutput.StandardRetur.FejlbeskedTekst);
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", OrganisationStubHelper.SERVICE, response.RetOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
 
-                log.Debug("Ret succesful on Organisation with uuid " + registry.MunicipalityOrganisationUUID);
+                log.Debug("Ret succesful on Organisation with uuid " + OrganisationRegistryProperties.MunicipalityOrganisationUUID);
             }
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
             {
@@ -126,18 +96,15 @@ namespace Organisation.IntegrationLayer
             laesInput.UUIDIdentifikator = uuid;
 
             laesRequest request = new laesRequest();
-            request.LaesRequest1 = new LaesRequestType();
-            request.LaesRequest1.LaesInput = laesInput;
-            request.LaesRequest1.AuthorityContext = new AuthorityContextType();
-            request.LaesRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.LaesInput = laesInput;
 
-            OrganisationPortType channel = StubUtil.CreateChannel<OrganisationPortType>(OrganisationStubHelper.SERVICE, "Laes", helper.CreatePort());
+            OrganisationPortType channel = StubUtil.CreateChannel<OrganisationPortType>(OrganisationStubHelper.SERVICE, "Laes");
 
             try
             {
-                laesResponse response = channel.laes(request);
+                laesResponse response = channel.laesAsync(request).Result;
 
-                int statusCode = Int32.Parse(response.LaesResponse1.LaesOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(response.LaesOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
                     // note that statusCode 44 means that the object does not exists, so that is a valid response
@@ -145,7 +112,7 @@ namespace Organisation.IntegrationLayer
                     return null;
                 }
 
-                RegistreringType1[] resultSet = response.LaesResponse1.LaesOutput.FiltreretOejebliksbillede.Registrering;
+                RegistreringType1[] resultSet = response.LaesOutput.FiltreretOejebliksbillede.Registrering;
                 if (resultSet.Length == 0)
                 {
                     log.Warn("Organisation with uuid '" + uuid + "' exists, but has no registration");

@@ -17,11 +17,6 @@ namespace Organisation.ServiceLayer
         [HttpGet]
         public IActionResult Read([FromHeader] string cvr, [FromHeader] string apiKey)
         {
-            if (!ApiKeyFilter.ValidApiKey(apiKey))
-            {
-                return Unauthorized();
-            }
-
             List<UserDTO> result = new List<UserDTO>();
 
             try {

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Organisation.BusinessLayer.DTO.Read;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -18,6 +19,8 @@ namespace Organisation.BusinessLayer.DTO.Registration
         public string RacfID { get; set;}
         public string Location { get; set; }
         public string FMKID { get; set; }
+        public Status Status { get; set; }
+
 
         public List<Position> Positions { get; set; } = new List<Position>();
 

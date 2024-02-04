@@ -1,5 +1,4 @@
 ﻿using Organisation.BusinessLayer.DTO.Registration;
-using Organisation.IntegrationLayer;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -9,14 +8,8 @@ namespace Organisation.SchedulingLayer
 {
     public class UserDao
     {
-        private string connectionString = null;
 
-        public UserDao()
-        {
-            connectionString = OrganisationRegistryProperties.GetInstance().DBConnectionString;
-        }
-
-        public void Save(UserRegistration user, OperationType operation, string cvr)
+        public void Save(UserRegistration user, OperationType operation, bool bypassCache, int priority, string cvr)
         {
             long user_id = 0;
 
@@ -43,7 +36,9 @@ namespace Organisation.SchedulingLayer
                             command.Parameters.Add(DaoUtil.GetParameter("@racfid", user.RacfID ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@location", user.Location ?? (object)DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@fmk_id", user.FMKID ?? (object)DBNull.Value));
+                            command.Parameters.Add(DaoUtil.GetParameter("@bypass_cache", bypassCache));
                             command.Parameters.Add(DaoUtil.GetParameter("@cvr", cvr));
+                            command.Parameters.Add(DaoUtil.GetParameter("@priority", priority));
                             command.Parameters.Add(DaoUtil.GetParameter("@operation", operation.ToString()));
 
                             user_id = Convert.ToInt64(command.ExecuteScalar());
@@ -77,7 +72,7 @@ namespace Organisation.SchedulingLayer
             }
         }
 
-        public List<UserRegistrationExtended> Get4OldestEntries()
+        public List<UserRegistrationExtended> GetOldestEntries()
         {
             var users = new List<UserRegistrationExtended>();
 
@@ -110,6 +105,7 @@ namespace Organisation.SchedulingLayer
                             user.Person.Name = GetValue(reader, "name");
                             user.Person.Cpr = GetValue(reader, "cpr");
                             user.Timestamp = (DateTime)reader["timestamp"];
+                            user.BypassCache = GetBooleanValue(reader, "bypass_cache");
                             user.Operation = (OperationType)Enum.Parse(typeof(OperationType), GetValue(reader, "operation"));
 
                             users.Add(user);
@@ -227,7 +223,7 @@ namespace Organisation.SchedulingLayer
             }
         }
 
-        public void OnSuccess(long id)
+        public void OnSuccess(long id, bool skippedDueToCache)
         {
             using (DbConnection connection = DaoUtil.GetConnection())
             {
@@ -236,6 +232,7 @@ namespace Organisation.SchedulingLayer
                 using (DbCommand command = DaoUtil.GetCommand(UserStatements.Success, connection))
                 {
                     command.Parameters.Add(DaoUtil.GetParameter("@id", id));
+                    command.Parameters.Add(DaoUtil.GetParameter("@skipped", skippedDueToCache));
                     command.ExecuteNonQuery();
                 }
             }
@@ -264,6 +261,29 @@ namespace Organisation.SchedulingLayer
             }
 
             return (string)reader[key];
+        }
+
+        private bool GetBooleanValue(DbDataReader reader, string key)
+        {
+            if (reader[key] is DBNull)
+            {
+                return false;
+            }
+
+            return (bool)reader[key];
+        }
+
+        public void Cleanup()
+        {
+            using (DbConnection connection = DaoUtil.GetConnection())
+            {
+                connection.Open();
+
+                using (DbCommand command = DaoUtil.GetCommand(UserStatements.Cleanup, connection))
+                {
+                    command.ExecuteNonQuery();
+                }
+            }
         }
     }
 }

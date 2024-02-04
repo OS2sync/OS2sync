@@ -12,7 +12,11 @@ namespace Organisation.BusinessLayer
             // set TLS version to 1.2
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-            OrganisationRegistryProperties.GetInstance();
+            // force static initialization
+            if (OrganisationRegistryProperties.AppSettings.Cvr != null)
+            {
+                ;
+            }
         }
     }
 }

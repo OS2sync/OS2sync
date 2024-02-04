@@ -20,7 +20,7 @@ namespace Organisation.ServiceLayer
         }
 
         [HttpPost]
-        public IActionResult Update([FromBody] UserRegistration user, [FromHeader] string cvr, [FromHeader] string apiKey)
+        public IActionResult Update([FromBody] UserRegistration user, [FromHeader] string cvr, [FromHeader] string apiKey, [FromQuery] bool bypassCache = false, [FromQuery] int priority = 10)
         {
             if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
             {
@@ -32,7 +32,7 @@ namespace Organisation.ServiceLayer
             {
                 try
                 {
-                    userDao.Save(user, OperationType.UPDATE, cvr);
+                    userDao.Save(user, OperationType.UPDATE, bypassCache, priority, cvr);
                 }
                 catch (Exception ex)
                 {
@@ -64,7 +64,7 @@ namespace Organisation.ServiceLayer
                     Uuid = uuid
                 };
 
-                userDao.Save(user, OperationType.DELETE, cvr);
+                userDao.Save(user, OperationType.DELETE, false, 10, cvr);
             }
             catch (Exception ex)
             {

@@ -11,7 +11,6 @@ namespace Organisation.IntegrationLayer
     {
         private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private BrugerStubHelper helper = new BrugerStubHelper();
-        private OrganisationRegistryProperties registry = OrganisationRegistryProperties.GetInstance();
 
         public void Importer(UserData user)
         {
@@ -44,18 +43,15 @@ namespace Organisation.IntegrationLayer
 
             // construct request
             importerRequest request = new importerRequest();
-            request.ImporterRequest1 = new ImporterRequestType();
-            request.ImporterRequest1.ImportInput = importInput;
-            request.ImporterRequest1.AuthorityContext = new AuthorityContextType();
-            request.ImporterRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.ImportInput = importInput;
 
             // send request
-            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Importer", helper.CreatePort());
+            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Importer");
 
             try
             {
-                importerResponse response = channel.importer(request);
-                int statusCode = Int32.Parse(response.ImporterResponse1.ImportOutput.StandardRetur.StatusKode);
+                importerResponse response = channel.importerAsync(request).Result;
+                int statusCode = Int32.Parse(response.ImportOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
                     if (statusCode == 49)
@@ -64,7 +60,7 @@ namespace Organisation.IntegrationLayer
                         return;
                     }
 
-                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Import", BrugerStubHelper.SERVICE, response.ImporterResponse1.ImportOutput.StandardRetur.FejlbeskedTekst);
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Import", BrugerStubHelper.SERVICE, response.ImportOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
 
                     throw new SoapServiceException(message);
@@ -90,7 +86,7 @@ namespace Organisation.IntegrationLayer
                 return;
             }
 
-            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Ret", helper.CreatePort());
+            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Ret");
 
             try
             {
@@ -104,14 +100,11 @@ namespace Organisation.IntegrationLayer
                 helper.SetTilstandToInactive(virkning, registration, timestamp);
 
                 retRequest request = new retRequest();
-                request.RetRequest1 = new RetRequestType();
-                request.RetRequest1.RetInput = input;
-                request.RetRequest1.AuthorityContext = new AuthorityContextType();
-                request.RetRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+                request.RetInput = input;
 
-                retResponse response = channel.ret(request);
+                retResponse response = channel.retAsync(request).Result;
 
-                int statusCode = Int32.Parse(response.RetResponse1.RetOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(response.RetOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
                     if (statusCode == 49)
@@ -120,7 +113,7 @@ namespace Organisation.IntegrationLayer
                         return;
                     }
 
-                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", BrugerStubHelper.SERVICE, response.RetResponse1.RetOutput.StandardRetur.FejlbeskedTekst);
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", BrugerStubHelper.SERVICE, response.RetOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
@@ -146,7 +139,7 @@ namespace Organisation.IntegrationLayer
 
             VirkningType virkning = helper.GetVirkning(user.Timestamp);
 
-            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Ret", helper.CreatePort());
+            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Ret");
 
             try
             {
@@ -259,10 +252,75 @@ namespace Organisation.IntegrationLayer
                     input.RelationListe.Adresser = newAdresser;
                     changes = true;
                 }
+
+                // FIX: indexes on existing users are sometimes broken, so we just reindex (noone uses the indexes for anything anyway)
+                //      note that this does not count as a change - if no changes are present, just ignore the reindex
+
+                if (input?.RelationListe?.Adresser != null)
+                {
+                    int idx = 0;
+
+                    // find largest index
+                    foreach (var adresseRef in input.RelationListe.Adresser)
+                    {
+                        if (adresseRef.Indeks != null)
+                        {
+                            int indeksValue;
+                            if (Int32.TryParse(adresseRef.Indeks, out indeksValue))
+                            {
+                                if (indeksValue > idx)
+                                {
+                                    idx = indeksValue;
+                                }
+                            }
+                        }
+                    }
+
+                    // add one
+                    idx++;
+
+                    // find any duplicates and fix them
+                    for (int i = 0; i < input.RelationListe.Adresser.Length; i++)
+                    {
+                        var adresseRef = input.RelationListe.Adresser[i];
+
+                        if (adresseRef.Indeks != null)
+                        {
+                            int indeksValue;
+                            if (Int32.TryParse(adresseRef.Indeks, out indeksValue))
+                            {
+                                bool duplicate = false;
+                                for (int j = i + 1; j < input.RelationListe.Adresser.Length; j++)
+                                {
+                                    var adresseRef2 = input.RelationListe.Adresser[j];
+                                    if (adresseRef2.Indeks != null)
+                                    {
+                                        int indeksValue2;
+                                        if (Int32.TryParse(adresseRef2.Indeks, out indeksValue2))
+                                        {
+                                            if (indeksValue == indeksValue2)
+                                            {
+                                                duplicate = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // if another adresseRef has the same Index, use the new largest index (and increment)
+                                if (duplicate)
+                                {
+                                    adresseRef.Indeks = idx.ToString();
+                                    idx++;
+                                }
+                            }
+                        }
+                    }
+                }
                 #endregion
 
                 #region Update organisation relationship
-                if (registration.RelationListe.Tilhoerer != null)
+                    if (registration.RelationListe.Tilhoerer != null)
                 {
                     // make sure that the pointer is set correctly
                     if (!StubUtil.GetMunicipalityOrganisationUUID().Equals(registration.RelationListe.Tilhoerer.ReferenceID.Item))
@@ -337,14 +395,11 @@ namespace Organisation.IntegrationLayer
 
                 // send Ret request
                 retRequest request = new retRequest();
-                request.RetRequest1 = new RetRequestType();
-                request.RetRequest1.RetInput = input;
-                request.RetRequest1.AuthorityContext = new AuthorityContextType();
-                request.RetRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+                request.RetInput = input;
 
-                retResponse response = channel.ret(request);
+                retResponse response = channel.retAsync(request).Result;
 
-                int statusCode = Int32.Parse(response.RetResponse1.RetOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(response.RetOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
                     if (statusCode == 49)
@@ -353,7 +408,7 @@ namespace Organisation.IntegrationLayer
                         return;
                     }
 
-                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", BrugerStubHelper.SERVICE, response.RetResponse1.RetOutput.StandardRetur.FejlbeskedTekst);
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", BrugerStubHelper.SERVICE, response.RetOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
@@ -379,18 +434,15 @@ namespace Organisation.IntegrationLayer
             listInput.UUIDIdentifikator = userUuids.ToArray();
 
             listRequest request = new listRequest();
-            request.ListRequest1 = new ListRequestType();
-            request.ListRequest1.ListInput = listInput;
-            request.ListRequest1.AuthorityContext = new AuthorityContextType();
-            request.ListRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.ListInput = listInput;
 
-            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "List", helper.CreatePort());
+            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "List");
 
             try
             {
-                listResponse response = channel.list(request);
+                listResponse response = channel.listAsync(request).Result;
 
-                int statusCode = Int32.Parse(response.ListResponse1.ListOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(response.ListOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
                     // note that statusCode 44 means that the object does not exists, so that is a valid response
@@ -398,13 +450,13 @@ namespace Organisation.IntegrationLayer
                     return result;
                 }
 
-                if (response.ListResponse1.ListOutput.FiltreretOejebliksbillede == null || response.ListResponse1.ListOutput.FiltreretOejebliksbillede.Length == 0)
+                if (response.ListOutput.FiltreretOejebliksbillede == null || response.ListOutput.FiltreretOejebliksbillede.Length == 0)
                 {
                     log.Debug("List on Bruger has 0 hits");
                     return result;
                 }
 
-                foreach (var user in response.ListResponse1.ListOutput.FiltreretOejebliksbillede)
+                foreach (var user in response.ListOutput.FiltreretOejebliksbillede)
                 {
                     RegistreringType1[] resultSet = user.Registrering;
                     if (resultSet.Length == 0)
@@ -454,7 +506,7 @@ namespace Organisation.IntegrationLayer
 
         public List<string> Soeg()
         {
-            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Soeg", helper.CreatePort());
+            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Soeg");
 
             SoegInputType1 soegInput = new SoegInputType1();
             soegInput.AttributListe = new AttributListeType();
@@ -472,8 +524,8 @@ namespace Organisation.IntegrationLayer
             soegInput.TilstandListe.Gyldighed[0].Virkning.FraTidspunkt.Item = DateTime.Now;
 
             // only return objects that have a Tilhører relationship top-level Organisation
-            UnikIdType orgReference = StubUtil.GetReference<UnikIdType>(registry.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()], ItemChoiceType.UUIDIdentifikator);
-            OrganisationRelationType organisationRelationType = new OrganisationRelationType();
+            UnikIdType orgReference = StubUtil.GetReference<UnikIdType>(OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()], ItemChoiceType.UUIDIdentifikator);
+            OrganisationFlerRelationType organisationRelationType = new OrganisationFlerRelationType();
             organisationRelationType.ReferenceID = orgReference;
             soegInput.RelationListe.Tilhoerer = organisationRelationType;
 
@@ -486,18 +538,15 @@ namespace Organisation.IntegrationLayer
 
             // search
             soegRequest request = new soegRequest();
-            request.SoegRequest1 = new SoegRequestType();
-            request.SoegRequest1.SoegInput = soegInput;
-            request.SoegRequest1.AuthorityContext = new AuthorityContextType();
-            request.SoegRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.SoegInput = soegInput;
 
             try
             {
-                soegResponse response = channel.soeg(request);
-                int statusCode = Int32.Parse(response.SoegResponse1.SoegOutput.StandardRetur.StatusKode);
+                soegResponse response = channel.soegAsync(request).Result;
+                int statusCode = Int32.Parse(response.SoegOutput.StandardRetur.StatusKode);
                 if (statusCode != 20 && statusCode != 44) // 44 is empty search result
                 {
-                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Soeg", BrugerStubHelper.SERVICE, response.SoegResponse1.SoegOutput.StandardRetur.FejlbeskedTekst);
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Soeg", BrugerStubHelper.SERVICE, response.SoegOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
@@ -505,7 +554,7 @@ namespace Organisation.IntegrationLayer
                 List<string> functions = new List<string>();
                 if (statusCode == 20)
                 {
-                    foreach (string id in response.SoegResponse1.SoegOutput.IdListe)
+                    foreach (string id in response.SoegOutput.IdListe)
                     {
                         functions.Add(id);
                     }
@@ -525,18 +574,15 @@ namespace Organisation.IntegrationLayer
             laesInput.UUIDIdentifikator = Guid.NewGuid().ToString().ToLower();
 
             laesRequest request = new laesRequest();
-            request.LaesRequest1 = new LaesRequestType();
-            request.LaesRequest1.LaesInput = laesInput;
-            request.LaesRequest1.AuthorityContext = new AuthorityContextType();
-            request.LaesRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.LaesInput = laesInput;
 
-            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Laes", helper.CreatePort());
+            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Laes");
 
             try
             {
-                laesResponse response = channel.laes(request);
+                laesResponse response = channel.laesAsync(request).Result;
 
-                int statusCode = Int32.Parse(response.LaesResponse1.LaesOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(response.LaesOutput.StandardRetur.StatusKode);
                 if (statusCode == 20 || statusCode == 44)
                 {
                     return true;
@@ -556,18 +602,15 @@ namespace Organisation.IntegrationLayer
             laesInput.UUIDIdentifikator = uuid;
 
             laesRequest request = new laesRequest();
-            request.LaesRequest1 = new LaesRequestType();
-            request.LaesRequest1.LaesInput = laesInput;
-            request.LaesRequest1.AuthorityContext = new AuthorityContextType();
-            request.LaesRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.LaesInput = laesInput;
 
-            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Laes", helper.CreatePort());
+            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Laes");
 
             try
             {
-                laesResponse response = channel.laes(request);
+                laesResponse response = channel.laesAsync(request).Result;
 
-                int statusCode = Int32.Parse(response.LaesResponse1.LaesOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(response.LaesOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
                     // note that statusCode 44 means that the object does not exists, so that is a valid response
@@ -575,7 +618,7 @@ namespace Organisation.IntegrationLayer
                     return null;
                 }
 
-                RegistreringType1[] resultSet = response.LaesResponse1.LaesOutput.FiltreretOejebliksbillede.Registrering;
+                RegistreringType1[] resultSet = response.LaesOutput.FiltreretOejebliksbillede.Registrering;
                 if (resultSet.Length == 0)
                 {
                     log.Warn("Bruger with uuid '" + uuid + "' exists, but has no registration");

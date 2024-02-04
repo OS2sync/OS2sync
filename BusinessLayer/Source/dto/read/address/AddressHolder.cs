@@ -43,5 +43,7 @@ namespace Organisation.BusinessLayer.DTO.Read
         public string ShortKey { get; set; }
         [DataMember]
         public string Value { get; set; }
+        [DataMember]
+        public string AddressIndex { get; set; }
     }
 }

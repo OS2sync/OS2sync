@@ -1254,132 +1254,151 @@ namespace Organisation.BusinessLayer
                     foreach (var address in registration.RelationListe.Adresser)
                     {
                         string addressUuid = address.ReferenceID.Item;
+                        string addressIndex = address.Indeks;
                         addressesToRead.Add(addressUuid);
 
                         if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_EMAIL))
                         {
                             addresses.Add(new Email()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOCATION))
                         {
                             addresses.Add(new Location()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_PHONE))
                         {
                             addresses.Add(new Phone()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSSHORTNAME))
                         {
                             addresses.Add(new LOSShortName()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSID))
                         {
                             addresses.Add(new LOSID()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_EAN))
                         {
                             addresses.Add(new Ean()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_URL))
                         {
                             addresses.Add(new Url()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_LANDLINE))
                         {
                             addresses.Add(new Landline()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_CONTACT_ADDRESS_OPEN_HOURS))
                         {
                             addresses.Add(new ContactHours()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_DTR_ID))
                         {
                             addresses.Add(new DtrId()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_EMAIL_REMARKS))
                         {
                             addresses.Add(new EmailRemarks()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_POST_RETURN))
                         {
                             addresses.Add(new PostReturn()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_CONTACT_ADDRESS))
                         {
                             addresses.Add(new Contact()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_POST))
                         {
                             addresses.Add(new Post()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_PHONE_OPEN_HOURS))
                         {
                             addresses.Add(new PhoneHours()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_FOA))
                         {
                             addresses.Add(new FOA()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_PNR))
                         {
                             addresses.Add(new PNR()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else if (address.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_SOR))
                         {
                             addresses.Add(new SOR()
                             {
-                                Uuid = addressUuid
+                                Uuid = addressUuid,
+                                AddressIndex = addressIndex
                             });
                         }
                         else

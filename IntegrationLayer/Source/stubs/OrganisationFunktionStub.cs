@@ -11,7 +11,6 @@ namespace Organisation.IntegrationLayer
     {
         private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private OrganisationFunktionStubHelper helper = new OrganisationFunktionStubHelper();
-        private OrganisationRegistryProperties registry = OrganisationRegistryProperties.GetInstance();
 
         public void Importer(OrgFunctionData orgFunction)
         {
@@ -55,22 +54,19 @@ namespace Organisation.IntegrationLayer
 
             // construct request
             importerRequest request = new importerRequest();
-            request.ImporterRequest1 = new ImporterRequestType();
-            request.ImporterRequest1.ImportInput = importInput;
-            request.ImporterRequest1.AuthorityContext = new AuthorityContextType();
-            request.ImporterRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.ImportInput = importInput;
 
             // send request
-            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Import", helper.CreatePort());
+            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Import");
 
             try
             {
-                importerResponse result = channel.importer(request);
+                importerResponse result = channel.importerAsync(request).Result;
 
-                int statusCode = Int32.Parse(result.ImporterResponse1.ImportOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(result.ImportOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
-                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Import", OrganisationFunktionStubHelper.SERVICE, result.ImporterResponse1.ImportOutput.StandardRetur.FejlbeskedTekst);
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Import", OrganisationFunktionStubHelper.SERVICE, result.ImportOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
@@ -96,7 +92,7 @@ namespace Organisation.IntegrationLayer
 
             VirkningType virkning = helper.GetVirkning(orgFunction.Timestamp);
 
-            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Ret", helper.CreatePort());
+            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Ret");
 
             try
             {
@@ -111,51 +107,27 @@ namespace Organisation.IntegrationLayer
                 changes = helper.SetTilstandToActive(virkning, registration, orgFunction.Timestamp) | changes;
 
                 #region Update attributes if needed
-                EgenskabType latestProperty = StubUtil.GetLatestProperty(input.AttributListe.Egenskab);
-                if (latestProperty == null || latestProperty.FunktionNavn == null || latestProperty.BrugervendtNoegleTekst == null ||
-                   (orgFunction.Name != null && !latestProperty.FunktionNavn.Equals(orgFunction.Name)) ||
-                   (orgFunction.ShortKey != null && !latestProperty.BrugervendtNoegleTekst.Equals(orgFunction.ShortKey)))
-                {
-                    if (latestProperty == null)
-                    {
-                        orgFunction.ShortKey = (orgFunction.ShortKey != null) ? orgFunction.ShortKey : IdUtil.GenerateShortKey();
-
-                        // special case where editing a function that has been orphaned, without supplying a name - should never really happen, but the API allows it
-                        orgFunction.Name = (orgFunction.Name != null) ? orgFunction.Name : "Unknown Function";
-                    }
-
-                    // create a new property
-                    EgenskabType newProperty = new EgenskabType();
-                    newProperty.Virkning = helper.GetVirkning(orgFunction.Timestamp);
-                    newProperty.BrugervendtNoegleTekst = (orgFunction.ShortKey != null) ? orgFunction.ShortKey : latestProperty.BrugervendtNoegleTekst;
-                    newProperty.FunktionNavn = (orgFunction.Name != null) ? orgFunction.Name : latestProperty.FunktionNavn;
-
-                    // create a new set of properties
-                    input.AttributListe.Egenskab = new EgenskabType[1];
-                    input.AttributListe.Egenskab[0] = newProperty;
-
-                    changes = true;
-                }
+                UpdateAttributes(input, orgFunction);
                 #endregion
 
                 #region update tasks if needed
                 if (taskIndicator.Equals(UpdateIndicator.COMPARE))
                 {
                     // terminate the Virkning on all address relationships that no longer exists locally
-                    changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.Opgaver, orgFunction.Tasks, orgFunction.Timestamp, false) || changes;
+                    changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.TilknyttedeOpgaver, orgFunction.Tasks, orgFunction.Timestamp, false) || changes;
 
                     // add references to address objects that are new
-                    List<string> taskUuidsToAdd = StubUtil.FindAllObjectsInLocalNotInOrg(input.RelationListe.Opgaver, orgFunction.Tasks, false);
+                    List<string> taskUuidsToAdd = StubUtil.FindAllObjectsInLocalNotInOrg(input.RelationListe.TilknyttedeOpgaver, orgFunction.Tasks, false);
 
                     if (taskUuidsToAdd.Count > 0)
                     {
-                        int size = taskUuidsToAdd.Count + ((input.RelationListe.Opgaver != null) ? input.RelationListe.Opgaver.Length : 0);
+                        int size = taskUuidsToAdd.Count + ((input.RelationListe.TilknyttedeOpgaver != null) ? input.RelationListe.TilknyttedeOpgaver.Length : 0);
                         KlasseFlerRelationType[] newTasks = new KlasseFlerRelationType[size];
 
                         int i = 0;
-                        if (input.RelationListe.Opgaver != null)
+                        if (input.RelationListe.TilknyttedeOpgaver != null)
                         {
-                            foreach (var taskInOrg in input.RelationListe.Opgaver)
+                            foreach (var taskInOrg in input.RelationListe.TilknyttedeOpgaver)
                             {
                                 newTasks[i++] = taskInOrg;
                             }
@@ -167,13 +139,13 @@ namespace Organisation.IntegrationLayer
                             {
                                 if (taskInLocal.Equals(uuidToAdd))
                                 {
-                                    KlasseFlerRelationType newTask = helper.CreateOpgaveRelation(uuidToAdd, virkning);
+                                    KlasseFlerRelationType newTask = helper.CreateKlasseRelation(uuidToAdd, virkning);
                                     newTasks[i++] = newTask;
                                 }
                             }
                         }
 
-                        input.RelationListe.Opgaver = newTasks;
+                        input.RelationListe.TilknyttedeOpgaver = newTasks;
                         changes = true;
                     }
                 }
@@ -445,14 +417,11 @@ namespace Organisation.IntegrationLayer
 
                 // send Ret request
                 retRequest request = new retRequest();
-                request.RetRequest1 = new RetRequestType();
-                request.RetRequest1.RetInput = input;
-                request.RetRequest1.AuthorityContext = new AuthorityContextType();
-                request.RetRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+                request.RetInput = input;
 
-                retResponse response = channel.ret(request);
+                retResponse response = channel.retAsync(request).Result;
 
-                int statusCode = Int32.Parse(response.RetResponse1.RetOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(response.RetOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
                     if (statusCode == 49)
@@ -461,7 +430,7 @@ namespace Organisation.IntegrationLayer
                         return;
                     }
 
-                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", OrganisationFunktionStubHelper.SERVICE, response.RetResponse1.RetOutput.StandardRetur.FejlbeskedTekst);
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", OrganisationFunktionStubHelper.SERVICE, response.RetOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
@@ -474,43 +443,74 @@ namespace Organisation.IntegrationLayer
             }
         }
 
-/* these two methods are the good ones, but we cannot use them because of a bug in search
-        public List<FiltreretOejebliksbilledeType> SoegAndGetLatestRegistration(string functionsTypeUuid, string userUuid, string unitUuid, string itSystemUuid)
+        private bool UpdateAttributes(RetInputType1 input, OrgFunctionData orgFunction)
         {
-            List<FiltreretOejebliksbilledeType> result = new List<FiltreretOejebliksbilledeType>();
-
-            // perform a search and then retrieve all the objects that matches the search criteria
-            List<string> uuidCandidates = Soeg(functionsTypeUuid, userUuid, unitUuid, itSystemUuid);
-            if (uuidCandidates == null || uuidCandidates.Count == 0)
+            EgenskabType latestProperty = StubUtil.GetLatestProperty(input.AttributListe.Egenskab);
+            if (latestProperty == null || latestProperty.FunktionNavn == null || latestProperty.BrugervendtNoegleTekst == null ||
+               (orgFunction.Name != null && !latestProperty.FunktionNavn.Equals(orgFunction.Name)) ||
+               (orgFunction.ShortKey != null && !latestProperty.BrugervendtNoegleTekst.Equals(orgFunction.ShortKey)))
             {
-                return result;
+                if (latestProperty == null)
+                {
+                    orgFunction.ShortKey = (orgFunction.ShortKey != null) ? orgFunction.ShortKey : IdUtil.GenerateShortKey();
+
+                    // special case where editing a function that has been orphaned, without supplying a name - should never really happen, but the API allows it
+                    orgFunction.Name = (orgFunction.Name != null) ? orgFunction.Name : "Unknown Function";
+                }
+
+                // create a new property
+                EgenskabType newProperty = new EgenskabType();
+                newProperty.Virkning = helper.GetVirkning(orgFunction.Timestamp);
+                newProperty.BrugervendtNoegleTekst = (orgFunction.ShortKey != null) ? orgFunction.ShortKey : latestProperty.BrugervendtNoegleTekst;
+                newProperty.FunktionNavn = (orgFunction.Name != null) ? orgFunction.Name : latestProperty.FunktionNavn;
+
+                // create a new set of properties
+                input.AttributListe.Egenskab = new EgenskabType[1];
+                input.AttributListe.Egenskab[0] = newProperty;
+
+                return true;
             }
 
-            FiltreretOejebliksbilledeType[] resultCandidates = GetLatestRegistrations(uuidCandidates.ToArray());
-            if (resultCandidates == null || resultCandidates.Length == 0)
-            {
-                return result;
-            }
-
-            foreach (FiltreretOejebliksbilledeType resultCandidate in resultCandidates)
-            {
-                result.Add(resultCandidate);
-            }
-
-            return result;
+            return false;
         }
 
-        public List<string> SoegAndGetUuids(string functionsTypeUuid, string userUuid, string unitUuid, string itSystemUuid)
-        {
-            List<string> uuids = Soeg(functionsTypeUuid, userUuid, unitUuid, itSystemUuid);
-            if (uuids == null)
-            {
-                return new List<string>();
-            }
+        /* these two methods are the good ones, but we cannot use them because of a bug in search
+                public List<FiltreretOejebliksbilledeType> SoegAndGetLatestRegistration(string functionsTypeUuid, string userUuid, string unitUuid, string itSystemUuid)
+                {
+                    List<FiltreretOejebliksbilledeType> result = new List<FiltreretOejebliksbilledeType>();
 
-            return uuids;
-        }
-*/
+                    // perform a search and then retrieve all the objects that matches the search criteria
+                    List<string> uuidCandidates = Soeg(functionsTypeUuid, userUuid, unitUuid, itSystemUuid);
+                    if (uuidCandidates == null || uuidCandidates.Count == 0)
+                    {
+                        return result;
+                    }
+
+                    FiltreretOejebliksbilledeType[] resultCandidates = GetLatestRegistrations(uuidCandidates.ToArray());
+                    if (resultCandidates == null || resultCandidates.Length == 0)
+                    {
+                        return result;
+                    }
+
+                    foreach (FiltreretOejebliksbilledeType resultCandidate in resultCandidates)
+                    {
+                        result.Add(resultCandidate);
+                    }
+
+                    return result;
+                }
+
+                public List<string> SoegAndGetUuids(string functionsTypeUuid, string userUuid, string unitUuid, string itSystemUuid)
+                {
+                    List<string> uuids = Soeg(functionsTypeUuid, userUuid, unitUuid, itSystemUuid);
+                    if (uuids == null)
+                    {
+                        return new List<string>();
+                    }
+
+                    return uuids;
+                }
+        */
 
         /* these two are the bad ones, but they contain the workaround for the bug on search */
         public List<FiltreretOejebliksbilledeType> SoegAndGetLatestRegistration(string functionsTypeUuid, string userUuid, string unitUuid, string itSystemUuid)
@@ -732,7 +732,7 @@ namespace Organisation.IntegrationLayer
 
         private List<string> Soeg(string functionsTypeUuid, string userUuid, string unitUuid, string itSystemUuid)
         {
-            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Soeg", helper.CreatePort());
+            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Soeg");
 
             SoegInputType1 soegInput = new SoegInputType1();
             soegInput.AttributListe = new AttributListeType();
@@ -740,7 +740,7 @@ namespace Organisation.IntegrationLayer
             soegInput.TilstandListe = new TilstandListeType();
 
             // only return objects that have a Tilhører relationship top-level Organisation
-            UnikIdType orgReference = StubUtil.GetReference<UnikIdType>(registry.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()], ItemChoiceType.UUIDIdentifikator);
+            UnikIdType orgReference = StubUtil.GetReference<UnikIdType>(OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()], ItemChoiceType.UUIDIdentifikator);
             soegInput.RelationListe.TilknyttedeOrganisationer = new OrganisationFlerRelationType[1];
             soegInput.RelationListe.TilknyttedeOrganisationer[0] = new OrganisationFlerRelationType();
             soegInput.RelationListe.TilknyttedeOrganisationer[0].ReferenceID = orgReference;
@@ -778,7 +778,7 @@ namespace Organisation.IntegrationLayer
                 }
             }
 
-            if (!String.IsNullOrEmpty(unitUuid))
+            if (!string.IsNullOrEmpty(unitUuid))
             {
                 UnikIdType reference = new UnikIdType();
                 reference.Item = unitUuid;
@@ -813,18 +813,15 @@ namespace Organisation.IntegrationLayer
 
             // search
             soegRequest request = new soegRequest();
-            request.SoegRequest1 = new SoegRequestType();
-            request.SoegRequest1.SoegInput = soegInput;
-            request.SoegRequest1.AuthorityContext = new AuthorityContextType();
-            request.SoegRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.SoegInput = soegInput;
 
             try
             {
-                soegResponse response = channel.soeg(request);
-                int statusCode = Int32.Parse(response.SoegResponse1.SoegOutput.StandardRetur.StatusKode);
+                soegResponse response = channel.soegAsync(request).Result;
+                int statusCode = Int32.Parse(response.SoegOutput.StandardRetur.StatusKode);
                 if (statusCode != 20 && statusCode != 44) // 44 is empty search result
                 {
-                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Soeg", OrganisationFunktionStubHelper.SERVICE, response.SoegResponse1.SoegOutput.StandardRetur.FejlbeskedTekst);
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Soeg", OrganisationFunktionStubHelper.SERVICE, response.SoegOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
@@ -832,7 +829,7 @@ namespace Organisation.IntegrationLayer
                 List<string> functions = new List<string>();
                 if (statusCode == 20)
                 {
-                    foreach (string id in response.SoegResponse1.SoegOutput.IdListe)
+                    foreach (string id in response.SoegOutput.IdListe)
                     {
                         functions.Add(id);
                     }
@@ -857,7 +854,7 @@ namespace Organisation.IntegrationLayer
                 return;
             }
 
-            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Ret", helper.CreatePort());
+            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Ret");
 
             try
             {
@@ -866,6 +863,15 @@ namespace Organisation.IntegrationLayer
                 input.AttributListe = registration.AttributListe;
                 input.TilstandListe = registration.TilstandListe;
                 input.RelationListe = registration.RelationListe;
+
+                // fix to repair broken data - we cannot deactivate if any of the required attributes on the existing
+                // object is null (thanks for allowing broken data into a system, but then preventing updates on them).
+                EgenskabType latestProperty = StubUtil.GetLatestProperty(input.AttributListe.Egenskab);
+                UpdateAttributes(input, new OrgFunctionData()
+                {
+                    Name = latestProperty?.FunktionNavn,
+                    ShortKey = latestProperty?.BrugervendtNoegleTekst
+                });
 
                 // cut relationship to all users
                 if (input.RelationListe.TilknyttedeBrugere != null && input.RelationListe.TilknyttedeBrugere.Length > 0)
@@ -886,9 +892,9 @@ namespace Organisation.IntegrationLayer
                 }
 
                 // cut relationship to all Opgaver
-                if (input.RelationListe.Opgaver != null && input.RelationListe.Opgaver.Length > 0)
+                if (input.RelationListe.TilknyttedeOpgaver != null && input.RelationListe.TilknyttedeOpgaver.Length > 0)
                 {
-                    foreach (var opgave in input.RelationListe.Opgaver)
+                    foreach (var opgave in input.RelationListe.TilknyttedeOpgaver)
                     {
                         StubUtil.TerminateVirkning(opgave.Virkning, timestamp);
                     }
@@ -899,17 +905,14 @@ namespace Organisation.IntegrationLayer
                 helper.SetTilstandToInactive(virkning, registration, timestamp);
 
                 retRequest request = new retRequest();
-                request.RetRequest1 = new RetRequestType();
-                request.RetRequest1.RetInput = input;
-                request.RetRequest1.AuthorityContext = new AuthorityContextType();
-                request.RetRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+                request.RetInput = input;
 
-                retResponse response = channel.ret(request);
+                retResponse response = channel.retAsync(request).Result;
 
-                int statusCode = Int32.Parse(response.RetResponse1.RetOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(response.RetOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
-                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", OrganisationFunktionStubHelper.SERVICE, response.RetResponse1.RetOutput.StandardRetur.FejlbeskedTekst);
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", OrganisationFunktionStubHelper.SERVICE, response.RetOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
@@ -974,26 +977,23 @@ namespace Organisation.IntegrationLayer
             listInput.UUIDIdentifikator = uuids;
 
             listRequest request = new listRequest();
-            request.ListRequest1 = new ListRequestType();
-            request.ListRequest1.ListInput = listInput;
-            request.ListRequest1.AuthorityContext = new AuthorityContextType();
-            request.ListRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.ListInput = listInput;
 
             if (futurePositions)
             {
-                request.ListRequest1.ListInput.VirkningFraFilter = new TidspunktType();
-                request.ListRequest1.ListInput.VirkningFraFilter.Item = DateTime.Now;
-                request.ListRequest1.ListInput.VirkningTilFilter = new TidspunktType();
-                request.ListRequest1.ListInput.VirkningTilFilter.Item = true;
+                request.ListInput.VirkningFraFilter = new TidspunktType();
+                request.ListInput.VirkningFraFilter.Item = DateTime.Now;
+                request.ListInput.VirkningTilFilter = new TidspunktType();
+                request.ListInput.VirkningTilFilter.Item = true;
             }
 
-            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "List", helper.CreatePort());
+            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "List");
 
             try
             {
-                listResponse response = channel.list(request);
+                listResponse response = channel.listAsync(request).Result;
 
-                int statusCode = Int32.Parse(response.ListResponse1.ListOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(response.ListOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
                     // note that statusCode 44 means that the objects does not exists, so that is a valid response
@@ -1009,13 +1009,13 @@ namespace Organisation.IntegrationLayer
                     return null;
                 }
 
-                if (response.ListResponse1.ListOutput.FiltreretOejebliksbillede == null || response.ListResponse1.ListOutput.FiltreretOejebliksbillede.Length == 0)
+                if (response.ListOutput.FiltreretOejebliksbillede == null || response.ListOutput.FiltreretOejebliksbillede.Length == 0)
                 {
                     log.Debug("Lookup on OrgFunction with uuids '" + string.Join(",", uuids) + "' returned an empty resultset");
                     return null;
                 }
 
-                return response.ListResponse1.ListOutput.FiltreretOejebliksbillede;
+                return response.ListOutput.FiltreretOejebliksbillede;
             }
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
             {

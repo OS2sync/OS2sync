@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Organisation.IntegrationLayer;
 using Organisation.BusinessLayer.DTO.Registration;
 using static Organisation.BusinessLayer.DTO.Registration.OrgUnitRegistration;
+using Organisation.BusinessLayer.DTO.Read;
+using IntegrationLayer.OrganisationEnhed;
 
 namespace Organisation.BusinessLayer
 {
@@ -13,7 +15,6 @@ namespace Organisation.BusinessLayer
         private OrganisationStub organisationStub = new OrganisationStub();
         private OrganisationFunktionStub organisationFunktionStub = new OrganisationFunktionStub();
         private InspectorService inspectorService = new InspectorService();
-        private OrganisationRegistryProperties registry = OrganisationRegistryProperties.GetInstance();
 
         /// <summary>
         /// This method will create the object in Organisation - note that if the object already exists, this method
@@ -39,23 +40,31 @@ namespace Organisation.BusinessLayer
                     ServiceHelper.UpdateManager(registration);
                 }
 
-                // if this unit is a working unit, that does payouts in behalf of a payout unit, create a reference to that payout unit
-                if (!registry.DisableUdbetalingsenheder() && !string.IsNullOrEmpty(registration.PayoutUnitUuid))
-                {
-                    string payoutUnitFunctionUuid = ServiceHelper.EnsurePayoutUnitFunctionExists(registration.PayoutUnitUuid, registration.Timestamp);
+                bool skipUdbetalingsenheder = DisableUdbetalingsenheder();
+                bool skipHenvendelsessteder = DisableHenvendelsessteder();
 
-                    orgUnitData.OrgFunctionsToAdd.Add(payoutUnitFunctionUuid);
+                // if this unit is a working unit, that does payouts in behalf of a payout unit, create a reference to that payout unit
+                if (!string.IsNullOrEmpty(registration.PayoutUnitUuid))
+                {
+                    if (!skipUdbetalingsenheder)
+                    {
+                        string payoutUnitFunctionUuid = ServiceHelper.EnsurePayoutUnitFunctionExists(registration.PayoutUnitUuid, registration.Timestamp);
+                        orgUnitData.OrgFunctionsToAdd.Add(payoutUnitFunctionUuid);
+                    }
                 }
 
                 // if this unit uses contactPlaces, make sure to add them
-                if (!registry.DisableHenvendelsessteder() && registration.ContactPlaces != null && registration.ContactPlaces.Count > 0)
+                if (registration.ContactPlaces != null && registration.ContactPlaces.Count > 0)
                 {
-                    foreach (var cp in registration.ContactPlaces)
+                    if (!skipHenvendelsessteder)
                     {
-                        string functionUuid = ServiceHelper.GetContactPlaceFunctionUuid(cp);
-                        if (functionUuid != null)
+                        foreach (var cp in registration.ContactPlaces)
                         {
-                            orgUnitData.OrgFunctionsToAdd.Add(functionUuid);
+                            string functionUuid = ServiceHelper.GetContactPlaceFunctionUuid(cp);
+                            if (functionUuid != null)
+                            {
+                                orgUnitData.OrgFunctionsToAdd.Add(functionUuid);
+                            }
                         }
                     }
                 }
@@ -65,7 +74,7 @@ namespace Organisation.BusinessLayer
                 UpdateOrganisationObject(orgUnitData);
 
                 // ensure "henvendelsessted" tasks are created
-                if (!OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder())
+                if (!skipHenvendelsessteder)
                 {
                     ServiceHelper.UpdateContactForTasks(registration.Uuid, registration.ContactForTasks, registration.Timestamp);
                 }
@@ -135,7 +144,7 @@ namespace Organisation.BusinessLayer
                     OrgUnitData orgUnitData = MapRegistrationToOrgUnitDTO(registration, addressRefs);
 
                     // deal with ContactPlaces and PayoutUnits
-                    if (!registry.DisableHenvendelsessteder() || !registry.DisableUdbetalingsenheder())
+                    if (!DisableHenvendelsessteder() || !DisableUdbetalingsenheder())
                     {
                         // read all existing functions (if any)
                         List<string> existingFunctionUuids = new List<string>();
@@ -157,7 +166,7 @@ namespace Organisation.BusinessLayer
                         }
 
                         #region Update ContactPlaces
-                        if (!registry.DisableHenvendelsessteder())
+                        if (!DisableHenvendelsessteder())
                         {
                             List<string> contactPlaceFunctionUuids = new List<string>();
 
@@ -211,7 +220,7 @@ namespace Organisation.BusinessLayer
                         #endregion
 
                         #region Update payout units
-                        if (!registry.DisableUdbetalingsenheder())
+                        if (!DisableUdbetalingsenheder())
                         {
                             string payoutUnitFunctionUuid = null;
 
@@ -251,7 +260,7 @@ namespace Organisation.BusinessLayer
                     organisationEnhedStub.Ret(orgUnitData);
 
                     // ensure "henvendelsessted" tasks are updated
-                    if (!OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder())
+                    if (!DisableHenvendelsessteder())
                     {
                         ServiceHelper.UpdateContactForTasks(registration.Uuid, registration.ContactForTasks, registration.Timestamp);
                     }
@@ -271,10 +280,11 @@ namespace Organisation.BusinessLayer
         private List<AddressRelation> UpdateAddresses(OrgUnitRegistration registration, global::IntegrationLayer.OrganisationEnhed.RegistreringType1 result)
         {
             // check what already exists in Organisation - and store the UUIDs of the existing addresses, we will need those later
-            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null, orgDtrIdUuid = null, orgLOSShortNameUuid = null, orgEanUuid = null, orgContactHoursUuid = null, orgPhoneHoursUuid = null, orgPostUuid = null, orgPostReturnUuid = null, orgContactUuid = null, orgEmailRemarksUuid = null, orgLandlineUuid = null, orgUrlUuid = null, orgLosIdUuid = null, orgFOAUuid = null, orgPNRUuid = null, orgSORUuid = null;
+            string orgPhoneUuid = null, orgEmailUuid = null, orgLocationUuid = null, orgDtrIdUuid = null, orgLOSShortNameUuid = null, orgEanUuid = null, orgContactHoursUuid = null, orgPhoneHoursUuid = null, orgPostUuid = null, orgPostSecondaryUuid = null, orgPostReturnUuid = null, orgContactUuid = null, orgEmailRemarksUuid = null, orgLandlineUuid = null, orgUrlUuid = null, orgLosIdUuid = null, orgFOAUuid = null, orgPNRUuid = null, orgSORUuid = null;
 
             if (result.RelationListe.Adresser != null)
             {
+                var posts = new List<AdresseFlerRelationType>();
                 foreach (var orgAddress in result.RelationListe.Adresser)
                 {
                     if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_PHONE))
@@ -315,7 +325,7 @@ namespace Organisation.BusinessLayer
                     }
                     else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_POST))
                     {
-                        orgPostUuid = orgAddress.ReferenceID.Item;
+                        posts.Add(orgAddress);
                     }
                     else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_CONTACT_ADDRESS_OPEN_HOURS))
                     {
@@ -348,6 +358,20 @@ namespace Organisation.BusinessLayer
                     else if (orgAddress.Rolle.Item.Equals(UUIDConstants.ADDRESS_ROLE_ORGUNIT_SOR))
                     {
                         orgSORUuid = orgAddress.ReferenceID.Item;
+                    }
+                }
+
+                // as we support 2 post addresses, we pick the two with the higest Index ;)
+                posts.Sort((x, y) => x.Indeks.CompareTo(y.Indeks));
+                foreach (var post in posts)
+                {
+                    if (orgPostUuid == null)
+                    {
+                        orgPostUuid = post.ReferenceID.Item;
+                    }
+                    else if (orgPostSecondaryUuid == null)
+                    {
+                        orgPostSecondaryUuid = post.ReferenceID.Item;
                     }
                 }
             }
@@ -506,6 +530,18 @@ namespace Organisation.BusinessLayer
                 });
             }
 
+            ServiceHelper.UpdateAddress(registration.PostSecondary, orgPostSecondaryUuid, registration.Timestamp, out uuid);
+            if (uuid != null)
+            {
+                addressRefs.Add(new AddressRelation()
+                {
+                    Uuid = uuid,
+                    Type = AddressRelationType.POST,
+                    // not prime, used for sorting later when updating indexes
+                    Prime = false
+                });
+            }
+
             ServiceHelper.UpdateAddress(registration.FOA, orgFOAUuid, registration.Timestamp, out uuid);
             if (uuid != null)
             {
@@ -526,12 +562,26 @@ namespace Organisation.BusinessLayer
                 });
             }
 
-            ServiceHelper.UpdateAddress(registration.SOR, orgSORUuid, registration.Timestamp, out uuid);
-            if (uuid != null)
+            // special case - only update if we actually have a value locally, as the SOR registry
+            // is also maintained by 3rd party integrations from KOMBIT
+            if (!string.IsNullOrEmpty(registration.SOR))
             {
+                ServiceHelper.UpdateAddress(registration.SOR, orgSORUuid, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.SOR
+                    });
+                }
+            }
+            else if (orgSORUuid != null)
+            {
+                // special case - keep the old reference even if no SOR is given locally
                 addressRefs.Add(new AddressRelation()
                 {
-                    Uuid = uuid,
+                    Uuid = orgSORUuid,
                     Type = AddressRelationType.SOR
                 });
             }
@@ -556,7 +606,6 @@ namespace Organisation.BusinessLayer
                     });
                 }
             }
-
 
             if (!string.IsNullOrEmpty(registration.Email))
             {
@@ -740,6 +789,21 @@ namespace Organisation.BusinessLayer
                 }
             }
 
+            if (!string.IsNullOrEmpty(registration.PostSecondary))
+            {
+                ServiceHelper.ImportAddress(registration.PostSecondary, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.POST,
+                        // this ensures that it will get a higher Index
+                        Prime = false
+                    });
+                }
+            }
+
             if (!string.IsNullOrEmpty(registration.FOA))
             {
                 ServiceHelper.ImportAddress(registration.FOA, registration.Timestamp, out uuid);
@@ -833,6 +897,8 @@ namespace Organisation.BusinessLayer
                 registration.ContactForTasks = ou.ContactForTasks;
                 registration.ContactPlaces = ou.ContactPlaces;
 
+                var posts = new List<AddressHolder>();
+
                 foreach (var address in ou.Addresses)
                 {
                     if (address is DTO.Read.Email)
@@ -891,10 +957,6 @@ namespace Organisation.BusinessLayer
                     {
                         registration.Ean = address.Value;
                     }
-                    else if (address is DTO.Read.Post)
-                    {
-                        registration.Post = address.Value;
-                    }
                     else if (address is DTO.Read.FOA)
                     {
                         registration.FOA = address.Value;
@@ -907,9 +969,27 @@ namespace Organisation.BusinessLayer
                     {
                         registration.SOR = address.Value;
                     }
+                    if (address is DTO.Read.Post)
+                    {
+                        posts.Add(address);
+                    }
                     else
                     {
                         log.Warn("Trying to Read OrgUnit " + uuid + " with unknown address type " + address.GetType().ToString());
+                    }
+                }
+
+                // special handling of Post because we support two variants (sort by index, assuming index is used correctly ;))
+                posts.Sort((x, y) => x.AddressIndex.CompareTo(y.AddressIndex));
+                foreach (var address in posts)
+                {
+                    if (registration.Post == null)
+                    {
+                        registration.Post = address.Value;
+                    }
+                    else if (registration.PostSecondary == null)
+                    {
+                        registration.PostSecondary = address.Value;
                     }
                 }
 
@@ -952,6 +1032,34 @@ namespace Organisation.BusinessLayer
             return organisationEnhed;
         }
 
+        private bool DisableUdbetalingsenheder()
+        {
+            if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableUdbetalingsenheder.Count > 0)
+            {
+                if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableUdbetalingsenheder.Contains("true") ||
+                    OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableUdbetalingsenheder.Contains(OrganisationRegistryProperties.GetCurrentMunicipality()))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool DisableHenvendelsessteder()
+        {
+            if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableHenvendelsessteder.Count > 0)
+            {
+                if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableHenvendelsessteder.Contains("true") ||
+                    OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableHenvendelsessteder.Contains(OrganisationRegistryProperties.GetCurrentMunicipality()))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private void ValidateAndEnforceCasing(OrgUnitRegistration registration)
         {
             List<string> errors = new List<string>();
@@ -971,12 +1079,12 @@ namespace Organisation.BusinessLayer
                 throw new InvalidFieldsException("Invalid registration object - the following fields are invalid: " + string.Join(",", errors));
             }
 
-            if (OrganisationRegistryProperties.GetInstance().DisableHenvendelsessteder())
+            if (DisableHenvendelsessteder())
             {
                 registration.ContactForTasks = new List<string>();
             }
 
-            if (OrganisationRegistryProperties.GetInstance().DisableUdbetalingsenheder())
+            if (DisableUdbetalingsenheder())
             {
                 registration.PayoutUnitUuid = null;
             }

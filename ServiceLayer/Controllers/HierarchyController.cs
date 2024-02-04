@@ -39,11 +39,6 @@ namespace Organisation.ServiceLayer
         [HttpGet]
         public IActionResult Read([FromHeader] string cvr, [FromHeader] string apiKey, [FromHeader] string onlyOUs)
         {
-            if (!ApiKeyFilter.ValidApiKey(apiKey))
-            {
-                return Unauthorized();
-            }
-
             string uuid = Guid.NewGuid().ToString().ToLower();
 
             new Thread(() => {
@@ -93,6 +88,7 @@ namespace Organisation.ServiceLayer
                             basicUser.Name = user.Person.Name;
                             basicUser.UserId = user.UserId;
                             basicUser.Uuid = user.Uuid;
+                            basicUser.Status = user.Status;
 
                             if (user.Addresses != null)
                             {
@@ -152,11 +148,6 @@ namespace Organisation.ServiceLayer
         [HttpGet("{uuid}")]
         public IActionResult ReadResult(string uuid, [FromHeader] string apiKey)
         {
-            if (!ApiKeyFilter.ValidApiKey(apiKey))
-            {
-                return Unauthorized();
-            }
-
             try
             {
                 if (cache.ContainsKey(uuid))

@@ -7,12 +7,11 @@ namespace Organisation.SchedulingLayer
 {
     public class DaoUtil
     {
+        private static DatabaseType database = "MYSQL".Equals(OrganisationRegistryProperties.AppSettings.SchedulerSettings.DBType) ? DatabaseType.MYSQL : DatabaseType.MSSQL;
+        private static string connectionString = OrganisationRegistryProperties.AppSettings.SchedulerSettings.DBConnectionString;
 
         public static DbConnection GetConnection()
         {
-            var connectionString = OrganisationRegistryProperties.GetInstance().DBConnectionString;
-            DatabaseType database = OrganisationRegistryProperties.GetInstance().Database;
-
             switch (database)
             {
                 case DatabaseType.MSSQL:
@@ -26,8 +25,6 @@ namespace Organisation.SchedulingLayer
 
         public static DbCommand GetCommand(string statement, DbConnection connection)
         {
-            DatabaseType database = OrganisationRegistryProperties.GetInstance().Database;
-
             switch (database)
             {
                 case DatabaseType.MSSQL:
@@ -41,8 +38,6 @@ namespace Organisation.SchedulingLayer
 
         public static object GetParameter(string key, object value)
         {
-            DatabaseType database = OrganisationRegistryProperties.GetInstance().Database;
-
             switch (database)
             {
                 case DatabaseType.MSSQL:

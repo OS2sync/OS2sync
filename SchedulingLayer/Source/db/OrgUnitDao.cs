@@ -1,5 +1,4 @@
 ﻿using Organisation.BusinessLayer.DTO.Registration;
-using Organisation.IntegrationLayer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,14 +9,7 @@ namespace Organisation.SchedulingLayer
 {
     public class OrgUnitDao
     {
-        private string connectionString = null;
-
-        public OrgUnitDao()
-        {
-            connectionString = OrganisationRegistryProperties.GetInstance().DBConnectionString;
-        }
-
-        public void Save(OrgUnitRegistration ou, OperationType operation, string cvr)
+        public void Save(OrgUnitRegistration ou, OperationType operation, bool bypassCache, int priority, string cvr)
         {
             long orgunit_id = 0;
 
@@ -38,7 +30,9 @@ namespace Organisation.SchedulingLayer
                             command.Parameters.Add(DaoUtil.GetParameter("@name", (object)ou.Name ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@parent_ou_uuid", (object)ou.ParentOrgUnitUuid ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@payout_ou_uuid", (object)ou.PayoutUnitUuid ?? DBNull.Value));
+                            command.Parameters.Add(DaoUtil.GetParameter("@bypass_cache", bypassCache));
                             command.Parameters.Add(DaoUtil.GetParameter("@cvr", cvr));
+                            command.Parameters.Add(DaoUtil.GetParameter("@priority", priority));
                             command.Parameters.Add(DaoUtil.GetParameter("@operation", operation.ToString()));
 
                             command.Parameters.Add(DaoUtil.GetParameter("@orgunit_type", ou.Type.ToString()));
@@ -57,6 +51,8 @@ namespace Organisation.SchedulingLayer
                             command.Parameters.Add(DaoUtil.GetParameter("@post_return", (object)ou.PostReturn ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@phone_open_hours", (object)ou.PhoneOpenHours ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@post", (object)ou.Post ?? DBNull.Value));
+                            command.Parameters.Add(DaoUtil.GetParameter("@post_secondary", (object)ou.PostSecondary ?? DBNull.Value));
+
                             command.Parameters.Add(DaoUtil.GetParameter("@foa", (object)ou.FOA ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@pnr", (object)ou.PNR ?? DBNull.Value));
                             command.Parameters.Add(DaoUtil.GetParameter("@sor", (object)ou.SOR ?? DBNull.Value));
@@ -134,7 +130,7 @@ namespace Organisation.SchedulingLayer
 
         }
 
-        public List<OrgUnitRegistrationExtended> Get4OldestEntries()
+        public List<OrgUnitRegistrationExtended> GetOldestEntries()
         {
             List<OrgUnitRegistrationExtended> result = new List<OrgUnitRegistrationExtended>();
 
@@ -167,6 +163,7 @@ namespace Organisation.SchedulingLayer
                             orgUnit.Location = GetValue(reader, "location");
                             orgUnit.Ean = GetValue(reader, "ean");
                             orgUnit.Post = GetValue(reader, "post_address");
+                            orgUnit.PostSecondary = GetValue(reader, "post_address_secondary");
                             orgUnit.ContactOpenHours = GetValue(reader, "contact_open_hours");
                             orgUnit.DtrId = GetValue(reader, "dtr_id");
                             orgUnit.EmailRemarks = GetValue(reader, "email_remarks");
@@ -176,6 +173,7 @@ namespace Organisation.SchedulingLayer
                             orgUnit.FOA = GetValue(reader, "foa");
                             orgUnit.PNR = GetValue(reader, "pnr");
                             orgUnit.SOR = GetValue(reader, "sor");
+                            orgUnit.BypassCache = GetBooleanValue(reader, "bypass_cache");
                             orgUnit.Operation = (OperationType)Enum.Parse(typeof(OperationType), GetValue(reader, "operation"));
                             orgUnit.Cvr = GetValue(reader, "cvr");
 
@@ -301,6 +299,7 @@ namespace Organisation.SchedulingLayer
                             orgUnit.Location = GetValue(reader, "location");
                             orgUnit.Ean = GetValue(reader, "ean");
                             orgUnit.Post = GetValue(reader, "post_address");
+                            orgUnit.PostSecondary = GetValue(reader, "post_address_secondary");
                             orgUnit.ContactOpenHours = GetValue(reader, "contact_open_hours");
                             orgUnit.DtrId = GetValue(reader, "dtr_id");
                             orgUnit.EmailRemarks = GetValue(reader, "email_remarks");
@@ -416,7 +415,7 @@ namespace Organisation.SchedulingLayer
             }
         }
 
-        public void OnSuccess(long id)
+        public void OnSuccess(long id, bool skippedDueToCache)
         {
             using (DbConnection connection = DaoUtil.GetConnection())
             {
@@ -425,6 +424,7 @@ namespace Organisation.SchedulingLayer
                 using (DbCommand command = DaoUtil.GetCommand(OrgUnitStatements.Success, connection))
                 {
                     command.Parameters.Add(DaoUtil.GetParameter("@id", id));
+                    command.Parameters.Add(DaoUtil.GetParameter("@skipped", skippedDueToCache));
                     command.ExecuteNonQuery();
                 }
             }
@@ -453,6 +453,29 @@ namespace Organisation.SchedulingLayer
             }
 
             return (string)reader[key];
+        }
+
+        private bool GetBooleanValue(DbDataReader reader, string key)
+        {
+            if (reader[key] is DBNull)
+            {
+                return false;
+            }
+
+            return (bool)reader[key];
+        }
+
+        public void Cleanup()
+        {
+            using (DbConnection connection = DaoUtil.GetConnection())
+            {
+                connection.Open();
+
+                using (DbCommand command = DaoUtil.GetCommand(OrgUnitStatements.Cleanup, connection))
+                {
+                    command.ExecuteNonQuery();
+                }
+            }
         }
     }
 }

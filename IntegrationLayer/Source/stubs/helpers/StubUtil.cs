@@ -2,35 +2,29 @@
 using System.ServiceModel;
 using System.Security.Cryptography.X509Certificates;
 using System.Collections.Generic;
-using IntegrationLayer.OrganisationFunktion;
+using System.ServiceModel.Channels;
+using System.IdentityModel.Tokens;
+using Digst.OioIdws.WscCore.OioWsTrust;
+using Digst.OioIdws.OioWsTrustCore;
+using Digst.OioIdws.SoapCore;
+using Digst.OioIdws.SoapCore.Tokens;
+using Digst.OioIdws.SoapCore.Bindings;
+using Digst.OioIdws.CommonCore;
 
 namespace Organisation.IntegrationLayer
 {
     internal static class StubUtil
     {
         private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-        private static OrganisationRegistryProperties registryProperties = OrganisationRegistryProperties.GetInstance();
 
         public static string GetMunicipalityOrganisationUUID()
         {
-            return registryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()];
-        }
-
-        public static EndpointAddress GetEndPointAddress(string suffix)
-        {
-            EndpointAddress endPointAddress = new EndpointAddress(new Uri(registryProperties.ServicesBaseUrl + suffix));
-
-            return endPointAddress;
+            return OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()];
         }
 
         public static string ConstructSoapErrorMessage(int statusCode, string operation, string service, string FejlbeskedTekst)
         {
             return "Service '" + service + "." + operation + "' returned (" + statusCode + ") with message: " + FejlbeskedTekst;
-        }
-
-        public static Uri GetUri(string suffix)
-        {
-            return new Uri(registryProperties.ServicesBaseUrl + suffix);
         }
 
         public static bool TerminateVirkning(dynamic virkning, DateTime timestamp, bool force = false)
@@ -67,18 +61,123 @@ namespace Organisation.IntegrationLayer
             return reference;
         }
 
-        public static AdressePortType CreateChannel<AdressePortType>(string service, string operation, dynamic port)
+        public static PortType CreateChannel<PortType>(string service, string operation)
         {
-            Uri uri = GetUri(service);
-
-            if (registryProperties.LogRequestResponse)
+            OioIdwsWcfConfigurationSection wscConfiguration = new OioIdwsWcfConfigurationSection
             {
-                port.ChannelFactory.Endpoint.EndpointBehaviors.Add(new LoggingBehavior(service, operation));
+
+                StsEndpointAddress = OrganisationRegistryProperties.AppSettings.StsSettings.StsEndpointAddress,
+                StsEntityIdentifier = OrganisationRegistryProperties.AppSettings.StsSettings.StsEntityIdentifier,
+
+                StsCertificate = new Certificate
+                {
+                    FromFileSystem = true,
+                    FilePath = OrganisationRegistryProperties.AppSettings.StsSettings.StsCertificateLocation
+                },
+
+                WspEndpoint = OrganisationRegistryProperties.AppSettings.ServiceSettings.WspEndpointBaseUrl + service + "/",
+                WspEndpointID = OrganisationRegistryProperties.AppSettings.ServiceSettings.WspEndpointID,
+                WspSoapVersion = "1.2",
+
+                ServiceCertificate = new Certificate
+                {
+                    FromFileSystem = true,
+                    FilePath = OrganisationRegistryProperties.AppSettings.ServiceSettings.WspCertificateLocation
+                },
+
+                ClientCertificate = new Certificate
+                {
+                    FromFileSystem = true,
+                    FilePath = OrganisationRegistryProperties.AppSettings.ClientSettings.WscKeystoreLocation,
+                    Password = OrganisationRegistryProperties.AppSettings.ClientSettings.WscKeystorePassword,
+                },
+
+                Cvr = OrganisationRegistryProperties.AppSettings.Cvr,
+                TokenLifeTimeInMinutes = 120,
+                IncludeLibertyHeader = false,
+                MaxReceivedMessageSize = Int32.MaxValue
+            };
+
+            StsTokenServiceConfiguration stsConfiguration = TokenServiceConfigurationFactory.CreateConfiguration(wscConfiguration);
+
+            if (OrganisationRegistryProperties.AppSettings.TrustAllCertificates)
+            {
+                stsConfiguration.SslCertificateAuthentication.RevocationMode = X509RevocationMode.NoCheck;
+                stsConfiguration.StsCertificateAuthentication.RevocationMode = X509RevocationMode.NoCheck;
+                stsConfiguration.WspCertificateAuthentication.RevocationMode = X509RevocationMode.NoCheck;
+
+                stsConfiguration.SslCertificateAuthentication.CertificateValidationMode = System.ServiceModel.Security.X509CertificateValidationMode.None;
+                stsConfiguration.StsCertificateAuthentication.CertificateValidationMode = System.ServiceModel.Security.X509CertificateValidationMode.None;
+                stsConfiguration.WspCertificateAuthentication.CertificateValidationMode = System.ServiceModel.Security.X509CertificateValidationMode.None;
             }
 
-            port.ChannelFactory.Endpoint.EndpointBehaviors.Add(new RequestHeaderBehavior());
+            IStsTokenService stsTokenService = new StsTokenServiceCache(stsConfiguration);
+            var securityToken = (GenericXmlSecurityToken)stsTokenService.GetToken();
 
-            return port.ChannelFactory.CreateChannel();
+            return CreateChannelWithIssuedToken<PortType>(securityToken, stsConfiguration, service, operation);
+        }
+
+        /// <summary>
+        /// An equivalent version of the familiar CreateChannelWithIssuedToken helper method in the .NET Framework
+        /// </summary>
+        /// <typeparam name="T">Type of the service</typeparam>
+        /// <param name="token">A security token which is issued by an STS</param>
+        /// <param name="stsConfiguration">Configuration of the STS and the WSP</param>
+        /// <returns>A channel to call service T</returns>
+        public static T CreateChannelWithIssuedToken<T>(GenericXmlSecurityToken token, StsTokenServiceConfiguration stsConfiguration, string service, string operation)
+        {
+            if (token == null)
+                throw new ArgumentNullException(nameof(token));
+            if (stsConfiguration == null)
+                throw new ArgumentNullException(nameof(stsConfiguration));
+
+            // IMPORTANT: https://devblogs.microsoft.com/dotnet/wsfederationhttpbinding-in-net-standard-wcf/
+            // First, create the inner binding for communicating with the token issuer.
+            // The security settings will be specific to the STS and should mirror what
+            // would have been in an app.config in a .NET Framework scenario.
+
+            var serverCertificate = stsConfiguration.WspConfiguration.ServiceCertificate;
+            var messageVersion = MessageVersion.CreateVersion(stsConfiguration.WspConfiguration.SoapVersion, AddressingVersion.WSAddressing10);
+
+            // Create a token parameters. The token is then used by FederatedChannelSecurityTokenManager to create an instance of FederatedTokenSecurityTokenProvider which returns the token immediately
+            var tokenParameters = new FederatedSecurityTokenParameters(token, messageVersion, stsConfiguration, stsConfiguration.WspConfiguration.EndpointAddress)
+            {
+                MessageSecurityVersion = MessageSecurityVersion.WSSecurity11WSTrust13WSSecureConversation13WSSecurityPolicy12BasicSecurityProfile10,
+                MaxReceivedMessageSize = stsConfiguration.MaxReceivedMessageSize,
+                IncludeLibertyHeader = stsConfiguration.IncludeLibertyHeader,
+            };
+
+            var bindingToCallService = new OioIdwsSoapBinding(tokenParameters);
+            FederatedChannelFactory<T> factory = CreateFactory<T>(stsConfiguration, serverCertificate, bindingToCallService);
+
+            if (OrganisationRegistryProperties.AppSettings.LogSettings.LogRequestResponse)
+            {
+                factory.Endpoint.EndpointBehaviors.Add(new LoggingBehavior(service, operation));
+            }
+
+            factory.Endpoint.EndpointBehaviors.Add(new RequestHeaderBehavior());
+
+            // .NET Core does not support asymmetric binding, so it does not call the CreateSecurityTokenAuthenticator method to create an X509SecurityTokenAuthenticator to validate the service certificate
+            // Implement a custom X509SecurityTokenAuthenticator is not an option because not all necessary types used by that abstract class is exposed to .NET Core
+            stsConfiguration.WspCertificateAuthentication.Validate(serverCertificate);
+
+            return factory.CreateChannel();
+        }
+
+        private static FederatedChannelFactory<T> CreateFactory<T>(IStsTokenServiceConfiguration stsConfiguration, X509Certificate2 serverCertificate, OioIdwsSoapBinding bindingToCallService)
+        {
+            // we need to create a client 
+            var factory = new FederatedChannelFactory<T>(bindingToCallService, new EndpointAddress(stsConfiguration.WspConfiguration.EndpointAddress));
+            factory.Credentials.ServiceCertificate.Authentication.CopyFrom(stsConfiguration.WspCertificateAuthentication);
+            factory.Credentials.ServiceCertificate.SslCertificateAuthentication = stsConfiguration.SslCertificateAuthentication.DeepClone();
+
+            string dnsName = serverCertificate.GetNameInfo(X509NameType.DnsName, false);
+            EndpointIdentity identity = new DnsEndpointIdentity(dnsName);
+            EndpointAddress endpointAddress = new EndpointAddress(new Uri(stsConfiguration.WspConfiguration.EndpointAddress), identity);
+            factory.Endpoint.Address = endpointAddress;
+            factory.Credentials.ClientCertificate.Certificate = stsConfiguration.ClientCertificate;
+            factory.Credentials.ServiceCertificate.ScopedCertificates.Add(endpointAddress.Uri, serverCertificate);
+            return factory;
         }
 
         public static EgenskabType GetLatestProperty<EgenskabType>(EgenskabType[] properties)

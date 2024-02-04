@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using log4net.Config;
 using log4net;
 using log4net.Layout;
 using log4net.Appender;
@@ -15,78 +14,36 @@ namespace Organisation.IntegrationLayer
     {
         private static readonly ILog log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        private const string LOG_REQUEST_RESPONSE = "LogRequestResponse";
-        private const string REVOCATION_CHECK_KEY = "DisableRevocationCheck";
-        private const string DB_CONNECTION_STRING_KEY = "DBConnectionString";
-        private const string DB_TYPE_STRING_KEY = "DatabaseType";
-        private const string CLIENTCERT_PATH_KEY = "ClientCertPath";
-        private const string CLIENTCERT_PASSWORD_KEY = "ClientCertPassword";
-        private const string SSL_ENABLED = "SslEnabled";
-        private const string SSL_KEYSTORE_PATH = "SslKeystorePath";
-        private const String SSL_KEYSTORE_PASSWORD = "SslKeystorePassword";
-        private const string ENVIRONMENT_KEY = "Environment";
-        private const string LOG_LEVEL_KEY = "LogLevel";
-        private const string MUNICIPALITY_KEY = "Municipality";
-        private const string API_KEY = "ApiKey";
-        private const string ENABLE_SCHEDULER_KEY = "EnableScheduler";
-        private const string DISABLE_KLE_OPGAVER = "DisableKleOpgaver";
-        private const string DISABLE_HENVENDELSESSTEDER = "DisableHenvendelsessteder";
-        private const string DISABLE_UDBETALINGSENHEDER = "DisableUdbetalingsEnheder";
-
-        private static OrganisationRegistryProperties instance;
-
-        public string ClientCertPath { get; set; }
-        public string ClientCertPassword { get; set; }
-        public string ServicesBaseUrl { get; set; }
-        public bool LogRequestResponse { get; set; }
-        public bool DisableRevocationCheck { get; set; }
-        public bool EnableScheduler { get; set; }
-        public Dictionary<string, string> MunicipalityOrganisationUUID { get; set; }
-        public string ApiKey { get; set; }
-        public string DBConnectionString { get; set; }
-        public DatabaseType Database { get; set; }
-        public string DefaultMunicipality { get; set; }
-        public Level LogLevel { get; set;} = Level.Info; // default
-        public string MigrationScriptsPath { get; set; }
-        public List<string> DisableKleOpgaver { get; set; }
-        public List<string> DisableHenvendelsesstederList { get; set; }
-        public List<string> DisableUdbetalingsenhederList { get; set; }
-        public bool SslEnabled { get; set; }
-        public string SslKeystorePath { get; set; }
-        public string SslKeystorePassword { get; set; }
-
         [ThreadStatic]
         private static string MunicipalityThreadValue;
 
+        public static AppSettings AppSettings { get; set; } = new AppSettings();
+
+        public static Dictionary<string, string> MunicipalityOrganisationUUID { get; set; }
+
+        // prevent instances
         private OrganisationRegistryProperties()
+        {
+        }
+
+        static OrganisationRegistryProperties()
         {
             try
             {
                 Init();
-                log.Info("Loaded Registry Properties");
+                log.Info("Loaded Settings");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine(ex.ToString());
             }
-        }
-
-        public static OrganisationRegistryProperties GetInstance()
-        {
-            if (instance != null)
-            {
-                return instance;
-            }
-
-            return (instance = new OrganisationRegistryProperties());
         }
 
         public static string GetCurrentMunicipality()
         {
             if (string.IsNullOrEmpty(MunicipalityThreadValue))
             {
-                return GetInstance().DefaultMunicipality;
+                return AppSettings.Cvr;
             }
 
             return MunicipalityThreadValue;
@@ -100,51 +57,11 @@ namespace Organisation.IntegrationLayer
             }
             else
             {
-                MunicipalityThreadValue = GetInstance().DefaultMunicipality;
+                MunicipalityThreadValue = AppSettings.Cvr;
             }
         }
 
-        public bool DisableHenvendelsessteder()
-        {
-            if (DisableHenvendelsesstederList.Count > 0)
-            {
-                // true is global, disabled for all
-                if (DisableHenvendelsesstederList.Contains("true"))
-                {
-                    return true;
-                }
-
-                // check for CVR of current municipality
-                if (DisableHenvendelsesstederList.Contains(GetCurrentMunicipality()))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public bool DisableUdbetalingsenheder()
-        {
-            if (DisableUdbetalingsenhederList.Count > 0)
-            {
-                // true is global, disabled for all
-                if (DisableUdbetalingsenhederList.Contains("true"))
-                {
-                    return true;
-                }
-
-                // check for CVR of current municipality
-                if (DisableUdbetalingsenhederList.Contains(GetCurrentMunicipality()))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private void Init()
+        private static void Init()
         {
             var configuration = new ConfigurationBuilder()
                  .SetBasePath(Directory.GetCurrentDirectory())
@@ -152,115 +69,44 @@ namespace Organisation.IntegrationLayer
                  .AddEnvironmentVariables()
                  .Build();
 
-            ClientCertPath = configuration[CLIENTCERT_PATH_KEY];
-            ClientCertPassword = configuration[CLIENTCERT_PASSWORD_KEY];
-            LogRequestResponse = "true".Equals(configuration[LOG_REQUEST_RESPONSE]);
-            DBConnectionString = configuration[DB_CONNECTION_STRING_KEY];
-            DisableRevocationCheck = "true".Equals(configuration[REVOCATION_CHECK_KEY]);
-            DefaultMunicipality = configuration[MUNICIPALITY_KEY];
-            EnableScheduler = "true".Equals(configuration[ENABLE_SCHEDULER_KEY]);
-
-            DisableKleOpgaver = new List<string>();
-            var tmp = configuration[DISABLE_KLE_OPGAVER];
-            if (!string.IsNullOrEmpty(tmp) && !"false".Equals(tmp.ToLower()))
-            {
-                tmp = tmp.ToLower();
-
-                // then it either contains "true" or it contains a list of CVR numbers
-                DisableKleOpgaver.AddRange(tmp.Split(","));
-            }
-
-            DisableHenvendelsesstederList = new List<string>();
-            tmp = configuration[DISABLE_HENVENDELSESSTEDER];
-            if (!string.IsNullOrEmpty(tmp) && !"false".Equals(tmp.ToLower()))
-            {
-                tmp = tmp.ToLower();
-
-                // then it either contains "true" or it contains a list of CVR numbers
-                DisableHenvendelsesstederList.AddRange(tmp.Split(","));
-            }
-
-            DisableUdbetalingsenhederList = new List<string>();
-            tmp = configuration[DISABLE_UDBETALINGSENHEDER];
-            if (!string.IsNullOrEmpty(tmp) && !"false".Equals(tmp.ToLower()))
-            {
-                tmp = tmp.ToLower();
-
-                // then it either contains "true" or it contains a list of CVR numbers
-                DisableUdbetalingsenhederList.AddRange(tmp.Split(","));
-            }
-
-            SslEnabled = "true".Equals(configuration[SSL_ENABLED]);
-            if (SslEnabled)
-            {
-                SslKeystorePath = configuration[SSL_KEYSTORE_PATH];
-                SslKeystorePassword = configuration[SSL_KEYSTORE_PASSWORD];
-            }
-
-            DatabaseType type;
-            Enum.TryParse(configuration[DB_TYPE_STRING_KEY], out type);
-            Database = type;
-
-            switch (Database)
-            {
-                case DatabaseType.MSSQL:
-                    MigrationScriptsPath = Path.Combine(Directory.GetCurrentDirectory(), "mssql");
-                    break;
-                case DatabaseType.MYSQL:
-                    MigrationScriptsPath = Path.Combine(Directory.GetCurrentDirectory(), "mysql");
-                    break;
-            }
-
-            ApiKey = configuration[API_KEY];
-
-            string logLevel = configuration[LOG_LEVEL_KEY];
-            if ("DEBUG".Equals(logLevel))
-            {
-                LogLevel = Level.Debug;
-            }
-            else if ("INFO".Equals(logLevel))
-            {
-                LogLevel = Level.Info;
-            }
-            else if ("WARN".Equals(logLevel))
-            {
-                LogLevel = Level.Warn;
-            }
-            else if ("ERROR".Equals(logLevel))
-            {
-                LogLevel = Level.Error;
-            }
-            else
-            {
-                LogLevel = Level.Info;
-            }
+            configuration.Bind(AppSettings);
 
             InitLog();
 
-            string environmentValue = configuration[ENVIRONMENT_KEY];
-            Environment environment;
-            if ("TEST".Equals(environmentValue))
+            if (AppSettings.SchedulerSettings.Enabled)
             {
-                environment = new TestEnvironment();
-            }
-            else if ("PROD".Equals(environmentValue))
-            {
-                environment = new ProdEnvironment();
-            }
-            else
-            {
-                throw new Exception("Environment must be PROD or TEST. Was = " + environmentValue);
+                switch (AppSettings.SchedulerSettings.DBType)
+                {
+                    case "MYSQL":
+                        AppSettings.SchedulerSettings.DBMigrationPath = Path.Combine(Directory.GetCurrentDirectory(), "mysql");
+                        break;
+                    case "MSSQL":
+                        AppSettings.SchedulerSettings.DBMigrationPath = Path.Combine(Directory.GetCurrentDirectory(), "mssql");
+                        break;
+                    default:
+                        log.Error("Unknown DBType: " + AppSettings.SchedulerSettings.DBType);
+                        break;
+                }
             }
 
-            ServicesBaseUrl = environment.GetServicesBaseUrl();
-
-            log.Info("Configuration:\n"
-               + "  clientCertPath: " + ClientCertPath + "\n"
-               + "  logRequestResponse: " + LogRequestResponse + "\n"
-               + "  municipality: " + DefaultMunicipality + "\n"
-               + "  enableScheduler: " + EnableScheduler + "\n"
-               + "  environment: " + environmentValue
-            );
+            switch (AppSettings.Environment)
+            {
+                case "TEST":
+                    AppSettings.StsSettings.StsEndpointAddress = "https://adgangsstyring.eksterntest-stoettesystemerne.dk/runtime/services/kombittrust/14/certificatemixed";
+                    AppSettings.StsSettings.StsEntityIdentifier = "https://saml.adgangsstyring.eksterntest-stoettesystemerne.dk/runtime";
+                    AppSettings.ServiceSettings.WspEndpointBaseUrl = "https://organisation.eksterntest-stoettesystemerne.dk/organisation/";
+                    AppSettings.ServiceSettings.WspEndpointID = "http://stoettesystemerne.dk/service/organisation/3";
+                    break;
+                case "PROD":
+                    AppSettings.StsSettings.StsEndpointAddress = "https://adgangsstyring.stoettesystemerne.dk/runtime/services/kombittrust/14/certificatemixed";
+                    AppSettings.StsSettings.StsEntityIdentifier = "https://saml.adgangsstyring.stoettesystemerne.dk/runtime";
+                    AppSettings.ServiceSettings.WspEndpointBaseUrl = "https://organisation.stoettesystemerne.dk/organisation/";
+                    AppSettings.ServiceSettings.WspEndpointID = "http://stoettesystemerne.dk/service/organisation/3";
+                    break;
+                default:
+                    log.Error("Unknown Environment: " + AppSettings.Environment);
+                    break;
+            }
 
             // list of all 98 municipalities
             MunicipalityOrganisationUUID = new Dictionary<string, string>();
@@ -362,32 +208,60 @@ namespace Organisation.IntegrationLayer
             MunicipalityOrganisationUUID["29189854"] = "46844182-e850-4f9f-a95e-5d8fb3c45520";
             MunicipalityOrganisationUUID["29189420"] = "90b865ac-40b7-47ab-a625-06cbec45ec95";
             MunicipalityOrganisationUUID["55133018"] = "43e416bd-13ac-4d76-9f98-e2c963ffe3f7";
+
+            // load custom if available
+            if (!string.IsNullOrEmpty(AppSettings.CvrUuid))
+            {
+                MunicipalityOrganisationUUID[AppSettings.Cvr] = AppSettings.CvrUuid;
+            }
         }
 
-        private void InitLog()
+        private static void InitLog()
         {
-            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "log.config")))
+            PatternLayout patternLayout = new PatternLayout();
+            patternLayout.ConversionPattern = "%date - %-5level %logger - %message%newline";
+            patternLayout.ActivateOptions();
+
+            ConsoleAppender appender = new ConsoleAppender();
+            appender.Layout = patternLayout;
+            appender.ActivateOptions();
+
+            var logRepository = (log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository(Assembly.GetEntryAssembly());
+            logRepository.Root.AddAppender(appender);
+
+            if (!string.IsNullOrEmpty(AppSettings.LogSettings.LogFile))
             {
-                var logRepository = (log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository(Assembly.GetEntryAssembly());
+                RollingFileAppender fileAppender = new RollingFileAppender();
+                fileAppender.AppendToFile = true;
+                fileAppender.File = AppSettings.LogSettings.LogFile;
+                fileAppender.MaxFileSize = 10;
+                fileAppender.RollingStyle = RollingFileAppender.RollingMode.Size;
+                fileAppender.MaximumFileSize = "1000KB";
+                fileAppender.StaticLogFileName = true;
+                fileAppender.ActivateOptions();
 
-                XmlConfigurator.ConfigureAndWatch(logRepository, new FileInfo(Path.Combine(Directory.GetCurrentDirectory(), "log.config")));
+                logRepository.Root.AddAppender(fileAppender);
             }
-            else
+
+            Level LogLevel = Level.Info;
+            switch (AppSettings.LogSettings.LogLevel)
             {
-                PatternLayout patternLayout = new PatternLayout();
-                patternLayout.ConversionPattern = "%date - %-5level %logger - %message%newline";
-                patternLayout.ActivateOptions();
-
-                ConsoleAppender appender = new ConsoleAppender();
-                appender.Layout = patternLayout;
-                appender.ActivateOptions();
-
-                var logRepository = (log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository(Assembly.GetEntryAssembly());
-                logRepository.Root.AddAppender(appender);
-
-                logRepository.Root.Level = LogLevel;
-                logRepository.Configured = true;
+                case "INFO":
+                    LogLevel = Level.Info;
+                    break;
+                case "DEBUG":
+                    LogLevel = Level.Debug;
+                    break;
+                case "WARN":
+                    LogLevel = Level.Warn;
+                    break;
+                case "ERROR":
+                    LogLevel = Level.Error;
+                    break;
             }
+
+            logRepository.Root.Level = LogLevel;
+            logRepository.Configured = true;
         }
     }
 }

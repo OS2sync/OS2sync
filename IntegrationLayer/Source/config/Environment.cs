@@ -2,6 +2,9 @@
 {
     internal interface Environment
     {
-        string GetServicesBaseUrl();
+        public string GetStsEndpointAddress();
+        public string GetStsEntityIdentifier();
+        public string GetWspEndpointBaseUrl();
+        public string GetWspEndpointID();
     }
 }

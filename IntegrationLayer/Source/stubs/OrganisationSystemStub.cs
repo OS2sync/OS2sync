@@ -11,7 +11,6 @@ namespace Organisation.IntegrationLayer
     {
         private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private OrganisationSystemStubHelper helper = new OrganisationSystemStubHelper();
-        private OrganisationRegistryProperties registry = OrganisationRegistryProperties.GetInstance();
 
         public List<OrgUnitRegWrapper> Read(string antal, string offset, out Boolean moreData)
         {
@@ -22,27 +21,24 @@ namespace Organisation.IntegrationLayer
             input.FoersteResultatReference = offset;
 
             fremsoegobjekthierarkiRequest request = new fremsoegobjekthierarkiRequest();
-            request.FremsoegobjekthierarkiRequest1 = new FremsoegobjekthierarkiRequestType();
-            request.FremsoegobjekthierarkiRequest1.FremsoegObjekthierarkiInput = input;
-            request.FremsoegobjekthierarkiRequest1.AuthorityContext = new AuthorityContextType();
-            request.FremsoegobjekthierarkiRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.FremsoegObjekthierarkiInput = input;
 
             // send request
-            OrganisationSystemPortType channel = StubUtil.CreateChannel<OrganisationSystemPortType>(OrganisationSystemStubHelper.SERVICE, "FremsoegObjektHierarki", helper.CreatePort());
+            OrganisationSystemPortType channel = StubUtil.CreateChannel<OrganisationSystemPortType>(OrganisationSystemStubHelper.SERVICE, "FremsoegObjektHierarki");
 
             try
             {
-                var result = channel.fremsoegobjekthierarki(request);
+                var result = channel.fremsoegobjekthierarkiAsync(request).Result;
 
-                int statusCode = Int32.Parse(result.FremsoegobjekthierarkiResponse1.FremsoegObjekthierarkiOutput.StandardRetur.StatusKode);
+                int statusCode = Int32.Parse(result.FremsoegObjekthierarkiOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
-                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "FremsoegObjektHierarki", OrganisationSystemStubHelper.SERVICE, result.FremsoegobjekthierarkiResponse1.FremsoegObjekthierarkiOutput.StandardRetur.FejlbeskedTekst);
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "FremsoegObjektHierarki", OrganisationSystemStubHelper.SERVICE, result.FremsoegObjekthierarkiOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
 
-                var output = result.FremsoegobjekthierarkiResponse1.FremsoegObjekthierarkiOutput;
+                var output = result.FremsoegObjekthierarkiOutput;
                 if (log.IsDebugEnabled)
                 {
                     log.Debug("Found: " + output.OrganisationEnheder.Length + " Enheder, " +
@@ -59,7 +55,7 @@ namespace Organisation.IntegrationLayer
 
                 List<OrgUnitRegWrapper> registrations = new List<OrgUnitRegWrapper>();
 
-                var ous = result.FremsoegobjekthierarkiResponse1.FremsoegObjekthierarkiOutput.OrganisationEnheder;
+                var ous = result.FremsoegObjekthierarkiOutput.OrganisationEnheder;
                 foreach (var ou in ous)
                 {
                     string uuid = ou.ObjektType?.UUIDIdentifikator;
@@ -99,7 +95,7 @@ namespace Organisation.IntegrationLayer
             }
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Importer service on OrganisationSystem", ex);
+                throw new ServiceNotFoundException("Failed to establish connection to the fremsoegobjekthierarki service on OrganisationSystem", ex);
             }
         }
     }

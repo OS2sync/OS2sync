@@ -21,7 +21,7 @@ namespace Organisation.ServiceLayer
         }
 
         [HttpPost]
-        public IActionResult Update([FromBody] OrgUnitRegistration ou, [FromHeader] string cvr, [FromHeader] string apiKey)
+        public IActionResult Update([FromBody] OrgUnitRegistration ou, [FromHeader] string cvr, [FromHeader] string apiKey, [FromQuery] bool bypassCache = false, [FromQuery] int priority = 10)
         {
             if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
             {
@@ -37,7 +37,7 @@ namespace Organisation.ServiceLayer
             {
                 try
                 {
-                    orgUnitDao.Save(ou, OperationType.UPDATE, cvr);
+                    orgUnitDao.Save(ou, OperationType.UPDATE, bypassCache, priority, cvr);
                 }
                 catch (Exception ex)
                 {
@@ -70,7 +70,7 @@ namespace Organisation.ServiceLayer
                     Uuid = uuid
                 };
 
-                orgUnitDao.Save(toRemove, OperationType.DELETE, cvr);
+                orgUnitDao.Save(toRemove, OperationType.DELETE, false, 10, cvr);
             }
             catch (Exception ex)
             {

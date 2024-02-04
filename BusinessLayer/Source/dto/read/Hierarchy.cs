@@ -30,6 +30,8 @@ namespace Organisation.BusinessLayer.DTO.Read
         public List<BasicPosition> Positions { get; set; } = new List<BasicPosition>();
         public string Email { get; set; }
         public string Telephone { get; set; }
+        public Status Status { get; set; }
+
     }
 
     [Serializable]

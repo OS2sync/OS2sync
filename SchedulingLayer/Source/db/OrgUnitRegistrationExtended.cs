@@ -7,8 +7,13 @@ namespace Organisation.SchedulingLayer
     {
         [JsonIgnore]
         public long Id { get; set; }
+
         [JsonIgnore]
         public OperationType Operation { get; set; }
+
+        [JsonIgnore]
+        public bool BypassCache { get; set; }
+
         public string Cvr { get; set; }
     }
 }

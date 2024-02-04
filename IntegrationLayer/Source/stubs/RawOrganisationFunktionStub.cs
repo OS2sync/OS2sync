@@ -15,17 +15,14 @@ namespace Organisation.IntegrationLayer
         {
             // construct request
             importerRequest request = new importerRequest();
-            request.ImporterRequest1 = new ImporterRequestType();
-            request.ImporterRequest1.ImportInput = importInput;
-            request.ImporterRequest1.AuthorityContext = new AuthorityContextType();
-            request.ImporterRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.ImportInput = importInput;
 
             // send request
-            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Import", helper.CreatePort());
+            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Import");
 
             try
             {
-                return channel.importer(request);
+                return channel.importerAsync(request).Result;
             }
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
             {
@@ -37,24 +34,20 @@ namespace Organisation.IntegrationLayer
         {
             // send Ret request
             retRequest request = new retRequest();
-            request.RetRequest1 = new RetRequestType();
-            request.RetRequest1.RetInput = input;
-            request.RetRequest1.AuthorityContext = new AuthorityContextType();
-            request.RetRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.RetInput = input;
 
             // send request
-            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Ret", helper.CreatePort());
+            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Ret");
 
             try
             {
-                return channel.ret(request);
+                return channel.retAsync(request).Result;
             }
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
             {
                 throw new ServiceNotFoundException("Failed to establish connection to the Ret service on OrganisationFunktion", ex);
             }
         }
-
 
         public laesResponse Read(string uuid)
         {
@@ -63,17 +56,14 @@ namespace Organisation.IntegrationLayer
             laesInput.UUIDIdentifikator = uuid;
 
             laesRequest request = new laesRequest();
-            request.LaesRequest1 = new LaesRequestType();
-            request.LaesRequest1.LaesInput = laesInput;
-            request.LaesRequest1.AuthorityContext = new AuthorityContextType();
-            request.LaesRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.LaesInput = laesInput;
 
             // send request
-            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "List", helper.CreatePort());
+            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "List");
 
             try
             {
-                return channel.laes(request);
+                return channel.laesAsync(request).Result;
             }
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
             {
@@ -85,24 +75,20 @@ namespace Organisation.IntegrationLayer
         {
             // construct request
             soegRequest request = new soegRequest();
-            request.SoegRequest1 = new SoegRequestType();
-            request.SoegRequest1.SoegInput = soegInput;
-            request.SoegRequest1.AuthorityContext = new AuthorityContextType();
-            request.SoegRequest1.AuthorityContext.MunicipalityCVR = OrganisationRegistryProperties.GetCurrentMunicipality();
+            request.SoegInput = soegInput;
 
 
             // send request
-            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Soeg", helper.CreatePort());
+            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Soeg");
 
             try
             {
-                 return channel.soeg(request);
+                return channel.soegAsync(request).Result;
             }
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
             {
                 throw new ServiceNotFoundException("Failed to establish connection to the Soeg service on OrganisationFunktion", ex);
             }
         }
-
     }
 }

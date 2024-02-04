@@ -12,6 +12,8 @@ namespace Organisation.SchedulingLayer
     [DisallowConcurrentExecution]
     public class SyncJob : IJob
     {
+        private enum SyncResult { Processed, TemporaryFailure, SkippedDueToCache, PermanentFailed }
+
         private static log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private static DateTime nextRun = DateTime.MinValue;
         private static long errorCount = 0;
@@ -20,8 +22,6 @@ namespace Organisation.SchedulingLayer
         {
             try
             {
-                long userCount = 0, ouCount = 0;
-
                 if (DateTime.Compare(DateTime.Now, nextRun) < 0)
                 {
                     return Task.CompletedTask;
@@ -31,8 +31,12 @@ namespace Organisation.SchedulingLayer
                 {
                     log.Debug("Scheduler started synchronizing objects from queue");
 
-                    HandleOUs(out ouCount);
-                    HandleUsers(out userCount);
+                    // empties the entire queue before moving to users
+                    HandleOUs();
+
+                    // handles 100 users max, before looping (so it logs progress periodically, but also so we ensure that ous are handled,
+                    // even when we are synchronising 10.000+ users
+                    HandleUsers();
                 }
                 catch (Exception ex)
                 {
@@ -60,11 +64,6 @@ namespace Organisation.SchedulingLayer
                         log.Error("Failed to run scheduler, sleeping until: " + nextRun.ToString("MM/dd/yyyy HH:mm"), ex);
                     }
                 }
-
-                if (userCount > 0 || ouCount > 0)
-                {
-                    log.Info("Scheduler completed " + userCount + " user(s) and " + ouCount + " ou(s)");
-                }
             }
             catch (Exception ex)
             {
@@ -74,86 +73,98 @@ namespace Organisation.SchedulingLayer
             return Task.CompletedTask;
         }
 
-        public static void HandleUsers(out long count)
+        public static void HandleUsers()
         {
             UserService service = new UserService();
             UserDao dao = new UserDao();
-            count = 0;
+            int transferCount = 0, failureCount = 0, cacheCount = 0;
+            bool temporaryFailure = false;
+            int totalCount = 0;
 
-            var users = dao.Get4OldestEntries();
-
-            // remove duplicates
-            users = users.GroupBy(u => u.Uuid)
-                .Select(duplicateUsers => {
-                    // order users by Id desc
-                    var users = duplicateUsers.OrderByDescending(user => user.Id);
-                    
-                    // remove all but first
-                    users.Skip(1).ToList().ForEach(u => dao.Delete(u.Id));
-                    
-                    // return first
-                    return users.First();
-                }).ToList();
-
-            do
+            var users = dao.GetOldestEntries();
+            while (users.Count > 0)
             {
-                if (users.Count > 0)
-                {
-                    int subCounter = 0;
+                totalCount += users.Count;
 
-                    Parallel.ForEach(users, (user) => {
-                        using (var cancelTokenSource = new CancellationTokenSource())
+                Parallel.ForEach(users, (user) => {
+                    using (var cancelTokenSource = new CancellationTokenSource())
+                    {
+                        var cancelToken = cancelTokenSource.Token;
+
+                        var task = Task.Run(() => HandleUser(user, service, dao), cancelToken);
+
+                        if (task.Wait(TimeSpan.FromSeconds(300)))
                         {
-                            var cancelToken = cancelTokenSource.Token;
-                            var task = Task.Run(() => HandleUser(user, service, dao), cancelToken);
-                            if (task.Wait(TimeSpan.FromSeconds(300)))
+                            switch (task.Result)
                             {
-                                int result = task.Result;
-
-                                switch (result)
-                                {
-                                    case -1:
-                                        // we are not increment subcounter here, as this is a temporary failure, and we should sleep
-                                        break;
-                                    case -2:
-                                        // bad data, it was logged and then throw away, nothing to see here, move along
-                                        lock (users)
-                                        {
-                                            subCounter++;
-                                        }
-                                        break;
-                                    default:
-                                        lock (users)
-                                        {
-                                            subCounter++;
-                                        }
-                                        errorCount = 0;
-                                        break;
-                                }
-                            }
-                            else
-                            {
-                                log.Warn("Timeout happended while waiting for synchronization of user: " + user.Uuid);
-
-                                cancelTokenSource.Cancel();
+                                case SyncResult.TemporaryFailure:
+                                    temporaryFailure = true;
+                                    break;
+                                case SyncResult.PermanentFailed:
+                                    // bad data, it was logged and then throw away, nothing to see here, move along
+                                    lock (users)
+                                    {
+                                        failureCount++;
+                                    }
+                                    break;
+                                case SyncResult.SkippedDueToCache:
+                                    lock (users)
+                                    {
+                                        cacheCount++;
+                                    }
+                                    // note we do not zero errorCount, as we did not actually call FK Organisation
+                                    break;
+                                case SyncResult.Processed:
+                                    lock (users)
+                                    {
+                                        transferCount++;
+                                    }
+                                    errorCount = 0;
+                                    break;
                             }
                         }
-                    });
+                        else
+                        {
+                            log.Warn("Timeout happended while waiting for synchronization of user: " + user.Uuid);
 
-                    count += subCounter;
-                    if (subCounter != users.Count) {
-                        throw new TemporaryFailureException();
+                            cancelTokenSource.Cancel();
+                        }
                     }
+                });
 
-                    users = dao.Get4OldestEntries();
+                if (temporaryFailure)
+                {
+                    break;
                 }
-            } while (users.Count > 0);
+
+                // handle 100 users at a time, then restart global loop (so we log periodically, and can skip to OU's)
+                if (totalCount >= 100)
+                {
+                    break;
+                }
+
+                users = dao.GetOldestEntries();
+            }
+
+            if (transferCount > 0 || failureCount > 0 || cacheCount > 0)
+            {
+                int total = transferCount + failureCount + cacheCount;
+
+                log.Info("Processed " + total + " user(s): success=" + transferCount + ", failure=" + failureCount + ", cacheSkip=" + cacheCount);
+            }
+
+            // indicate to main control that we should sleep a short while before trying again
+            if (temporaryFailure)
+            {
+                throw new TemporaryFailureException();
+            }
         }
 
-        public static int HandleUser(UserRegistrationExtended user, UserService service, UserDao dao)
+        private static SyncResult HandleUser(UserRegistrationExtended user, UserService service, UserDao dao)
         {
             try
             {
+                bool identicalToLastSuccess = false;
                 OrganisationRegistryProperties.SetCurrentMunicipality(user.Cvr);
 
                 if (user.Operation.Equals(OperationType.DELETE))
@@ -162,40 +173,46 @@ namespace Organisation.SchedulingLayer
                 }
                 else
                 {
-                    bool identicalToLastSuccess = false;
                     if (user.Operation.Equals(OperationType.UPDATE))
                     {
-
+                        // TODO: verify this works before we enable
+                        /*
                         // check for no changes
-                        var succesUsers = dao.GetSuccessEntries(user.Uuid);
-                        var userToCompare = succesUsers.Where(user => user.Operation.Equals(OperationType.UPDATE)).OrderBy(user => user.Id).LastOrDefault();
-                        if (userToCompare != null)
+                        if (!user.BypassCache)
                         {
-                            string jsonUserToCompare = JsonSerializer.Serialize(userToCompare);
-                            string jsonUser = JsonSerializer.Serialize(user);
-                            identicalToLastSuccess = jsonUserToCompare.Equals(jsonUser);
+                            var succesUsers = dao.GetSuccessEntries(user.Uuid);
+                            var userToCompare = succesUsers.Where(user => user.Operation.Equals(OperationType.UPDATE)).OrderBy(user => user.Id).LastOrDefault();
+                            if (userToCompare != null)
+                            {
+                                string jsonUserToCompare = JsonSerializer.Serialize(userToCompare);
+                                string jsonUser = JsonSerializer.Serialize(user);
+                                identicalToLastSuccess = jsonUserToCompare.Equals(jsonUser);
+                            }
                         }
+                        */
                     }
 
-                    if (identicalToLastSuccess)
-                    {
-                        log.Debug("Skipping user update for '" + user.Uuid + "' because it was identical to last known successful update");
-                    }
-                    else
+                    if (!identicalToLastSuccess)
                     {
                         service.Update(user);
                     }
                 }
-                dao.OnSuccess(user.Id);
+
+                dao.OnSuccess(user.Id, identicalToLastSuccess);
                 dao.Delete(user.Id);
 
-                return 0;
+                if (identicalToLastSuccess)
+                {
+                    log.Debug("Skipping user update for '" + user.Uuid + "' because it was identical to last known successful update");
+                    return SyncResult.SkippedDueToCache;
+                }
+
+                return SyncResult.Processed;
             }
             catch (TemporaryFailureException ex)
             {
                 log.Warn("Could not handle user '" + user.Uuid + "' at the moment, will try later", ex);
-
-                return -1;
+                return SyncResult.TemporaryFailure;
             }
             catch (Exception ex)
             {
@@ -203,91 +220,93 @@ namespace Organisation.SchedulingLayer
                 dao.OnFailure(user.Id, ex.Message);
                 dao.Delete(user.Id);
 
-                return -2;
+                return SyncResult.PermanentFailed;
             }
         }
 
-        public static void HandleOUs(out long count)
+        public static void HandleOUs()
         {
             OrgUnitService service = new OrgUnitService();
             OrgUnitDao dao = new OrgUnitDao();
-            count = 0;
+            int transferCount = 0, failureCount = 0, cacheCount = 0;
+            bool temporaryFailure = false;
 
-            var orgUnits = dao.Get4OldestEntries();
-
-            // remove duplicates
-            orgUnits = orgUnits.GroupBy(u => u.Uuid)
-                .Select(duplicateOUs => {
-                    // order orgUnits by Id desc
-                    var ous = duplicateOUs.OrderByDescending(user => user.Id);
-                    
-                    // remove all but first
-                    ous.Skip(1).ToList().ForEach(ou => dao.Delete(ou.Id));
-                    
-                    // return first
-                    return ous.First();
-                }).ToList();
-
-            do {
-                if (orgUnits.Count > 0)
+            var orgUnits = dao.GetOldestEntries();
+            while (orgUnits.Count > 0)
+            {
+                Parallel.ForEach(orgUnits, (orgUnit) =>
                 {
-                    int subCounter = 0;
-                        
-                    Parallel.ForEach(orgUnits, (orgUnit) =>
+                    using (var cancelTokenSource = new CancellationTokenSource())
                     {
-                        using (var cancelTokenSource = new CancellationTokenSource())
+                        var cancelToken = cancelTokenSource.Token;
+
+                        var task = Task.Run(() => HandleOU(orgUnit, service, dao), cancelToken);
+
+                        if (task.Wait(TimeSpan.FromSeconds(300)))
                         {
-                            var cancelToken = cancelTokenSource.Token;
-                            var task = Task.Run(() => HandleOU(orgUnit, service, dao), cancelToken);
-
-                            if (task.Wait(TimeSpan.FromSeconds(300)))
+                            switch (task.Result)
                             {
-                                int result = task.Result;
-
-                                switch (result)
-                                {
-                                    case -1:
-                                        // we are not increment subcounter here, as this is a temporary failure, and we should sleep
-                                        break;
-                                    case -2:
-                                        // bad data, it was logged and then throw away, nothing to see here, move along
-                                        lock (orgUnits)
-                                        {
-                                            subCounter++;
-                                        }
-                                        break;
-                                    default:
-                                        lock (orgUnits)
-                                        {
-                                            subCounter++;
-                                        }
-                                        errorCount = 0;
-                                        break;
-                                }
-                            }
-                            else
-                            {
-                                log.Warn("Timeout happended while waiting for synchronization of OrgUnit: " + orgUnit.Uuid);
-
-                                cancelTokenSource.Cancel();
+                                case SyncResult.TemporaryFailure:
+                                    temporaryFailure = true;
+                                    break;
+                                case SyncResult.PermanentFailed:
+                                    // bad data, it was logged and then throw away, nothing to see here, move along
+                                    lock (orgUnits)
+                                    {
+                                        failureCount++;
+                                    }
+                                    break;
+                                case SyncResult.SkippedDueToCache:
+                                    lock (orgUnits)
+                                    {
+                                        cacheCount++;
+                                    }
+                                    // note we do not zero errorCount, as we did not actually call FK Organisation
+                                    break;
+                                case SyncResult.Processed:
+                                    lock (orgUnits)
+                                    {
+                                        transferCount++;
+                                    }
+                                    errorCount = 0;
+                                    break;
                             }
                         }
-                    });
+                        else
+                        {
+                            log.Warn("Timeout happended while waiting for synchronization of OrgUnit: " + orgUnit.Uuid);
 
-                    count += subCounter;
-                    if (subCounter != orgUnits.Count) {
-                        throw new TemporaryFailureException();
+                            cancelTokenSource.Cancel();
+                        }
                     }
+                });
 
-                    orgUnits = dao.Get4OldestEntries();
+                if (temporaryFailure) {
+                    break;
                 }
-            } while (orgUnits.Count > 0);
+
+                orgUnits = dao.GetOldestEntries();
+            }
+
+            if (transferCount > 0 || failureCount > 0 || cacheCount > 0)
+            {
+                int total = transferCount + failureCount + cacheCount;
+
+                log.Info("Processed " + total + " orgUnit(s): success=" + transferCount + ", failure=" + failureCount + ", cacheSkip=" + cacheCount);
+            }
+
+            // indicate to main control that we should sleep a short while before trying again
+            if (temporaryFailure)
+            {
+                throw new TemporaryFailureException();
+            }
         }
 
-        private static int HandleOU(OrgUnitRegistrationExtended ou, OrgUnitService service, OrgUnitDao dao)
+        private static SyncResult HandleOU(OrgUnitRegistrationExtended ou, OrgUnitService service, OrgUnitDao dao)
         {
             try
             {
+                bool identicalToLastSuccess = false;
                 OrganisationRegistryProperties.SetCurrentMunicipality(ou.Cvr);
 
                 if (ou.Operation.Equals(OperationType.DELETE))
@@ -296,40 +315,46 @@ namespace Organisation.SchedulingLayer
                 }
                 else
                 {
-                    bool identicalToLastSuccess = false;
                     if (ou.Operation.Equals(OperationType.UPDATE))
                     {
+                        // TODO: verify this works before we enable
+                        /*
                         // check for no changes
-                        var succesOus = dao.GetSuccessEntries(ou.Uuid);
-                        var ouToCompare = succesOus.Where(ou => ou.Operation.Equals(OperationType.UPDATE)).OrderBy(ou => ou.Id).LastOrDefault();
-                        if (ouToCompare != null)
+                        if (!ou.BypassCache)
                         {
-                            string jsonOUToCompare = JsonSerializer.Serialize(ouToCompare);
-                            string jsonOU = JsonSerializer.Serialize(ou);
-                            identicalToLastSuccess = jsonOUToCompare.Equals(jsonOU);
+                            var succesOus = dao.GetSuccessEntries(ou.Uuid);
+                            var ouToCompare = succesOus.Where(ou => ou.Operation.Equals(OperationType.UPDATE)).OrderBy(ou => ou.Id).LastOrDefault();
+                            if (ouToCompare != null)
+                            {
+                                string jsonOUToCompare = JsonSerializer.Serialize(ouToCompare);
+                                string jsonOU = JsonSerializer.Serialize(ou);
+                                identicalToLastSuccess = jsonOUToCompare.Equals(jsonOU);
+                            }
                         }
+                        */
+                    }
 
-                    }
-                    if (identicalToLastSuccess)
-                    {
-                        log.Debug("Skipping ou update for '" + ou.Uuid + "' because it was identical to last known successful update");
-                    }
-                    else
+                    if (!identicalToLastSuccess)
                     {
                         service.Update(ou);
                     }
-                    
                 }
 
-                dao.OnSuccess(ou.Id);
+                dao.OnSuccess(ou.Id, identicalToLastSuccess);
                 dao.Delete(ou.Id);
 
-                return 0;
+                if (identicalToLastSuccess)
+                {
+                    log.Debug("Skipping ou update for '" + ou.Uuid + "' because it was identical to last known successful update");
+                    return SyncResult.SkippedDueToCache;
+                }
+
+                return SyncResult.Processed;
             }
             catch (TemporaryFailureException ex)
             {
                 log.Warn("Could not handle ou '" + ou.Uuid + "' at the moment, will try later", ex);
-                return -1;
+                return SyncResult.TemporaryFailure;
             }
             catch (Exception ex)
             {
@@ -337,7 +362,7 @@ namespace Organisation.SchedulingLayer
                 dao.OnFailure(ou.Id, ex.Message);
                 dao.Delete(ou.Id);
 
-                return -2;
+                return SyncResult.PermanentFailed;
             }
         }
     }

@@ -10,8 +10,7 @@ namespace Organisation.IntegrationLayer
 {
     internal class OrganisationEnhedStubHelper
     {
-        internal const string SERVICE = "organisationenhed";
-        private static OrganisationRegistryProperties registryProperties = OrganisationRegistryProperties.GetInstance();
+        internal const string SERVICE = "organisationenhed/6";
 
         internal void AddTilknyttedeFunktioner(List<string> tilknytteFunktioner, VirkningType virkning, RegistreringType1 registration)
         {
@@ -129,18 +128,18 @@ namespace Organisation.IntegrationLayer
 
         internal bool UpdateOpgaver(List<string> opgaver, VirkningType virkning, RegistreringType1 registration, DateTime timestamp)
         {
-            if (registryProperties.DisableKleOpgaver.Count > 0)
+            if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableOpgaver.Count > 0)
             {
                 // true is global, disabled for all
-                if (registryProperties.DisableKleOpgaver.Contains("true"))
+                if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableOpgaver.Contains("true"))
                 {
                     return false;
                 }
 
                 // check for CVR of current municipality
-                if (registryProperties.DisableKleOpgaver.Contains(OrganisationRegistryProperties.GetCurrentMunicipality()))
+                if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableOpgaver.Contains(OrganisationRegistryProperties.GetCurrentMunicipality()))
                 {
-                    return true;
+                    return false;
                 }
             }
 
@@ -179,7 +178,7 @@ namespace Organisation.IntegrationLayer
 
             if (registration.RelationListe?.Opgaver != null)
             {
-                IEqualityComparer<KlasseFlerRelationType> comparer = new KlasseFlerRelationTypeComparer();
+                IEqualityComparer<OpgaverFlerRelationType> comparer = new OpgaverFlerRelationTypeComparer();
 
                 // remove duplicates from registration.RelationListe.Opgaver (because sometimes we get duplicates back from KMD)
                 registration.RelationListe.Opgaver = registration.RelationListe.Opgaver.Distinct(comparer).ToArray();
@@ -206,14 +205,14 @@ namespace Organisation.IntegrationLayer
                 }
                 else
                 {
-                    KlasseFlerRelationType[] opgaverTypes = new KlasseFlerRelationType[toAdd.Count + registration.RelationListe.Opgaver.Length];
+                    OpgaverFlerRelationType[] opgaverTypes = new OpgaverFlerRelationType[toAdd.Count + registration.RelationListe.Opgaver.Length];
 
                     // add new
                     for (int i = 0; i < toAdd.Count; i++)
                     {
                         UnikIdType tilknytteFunktionId = StubUtil.GetReference<UnikIdType>(toAdd[i], ItemChoiceType.UUIDIdentifikator);
 
-                        KlasseFlerRelationType opgaveType = new KlasseFlerRelationType();
+                        OpgaverFlerRelationType opgaveType = new OpgaverFlerRelationType();
                         opgaveType.ReferenceID = tilknytteFunktionId;
                         opgaveType.Virkning = virkning;
 
@@ -240,13 +239,13 @@ namespace Organisation.IntegrationLayer
                 return;
             }
 
-            KlasseFlerRelationType[] opgaverTypes = new KlasseFlerRelationType[opgaver.Count];
+            OpgaverFlerRelationType[] opgaverTypes = new OpgaverFlerRelationType[opgaver.Count];
 
             for (int i = 0; i < opgaver.Count; i++)
             {
                 UnikIdType tilknytteFunktionId = StubUtil.GetReference<UnikIdType>(opgaver[i], ItemChoiceType.UUIDIdentifikator);
 
-                KlasseFlerRelationType opgaveType = new KlasseFlerRelationType();
+                OpgaverFlerRelationType opgaveType = new OpgaverFlerRelationType();
                 opgaveType.ReferenceID = tilknytteFunktionId;
                 opgaveType.Virkning = virkning;
 
@@ -261,7 +260,7 @@ namespace Organisation.IntegrationLayer
         {
             UnikIdType orgReference = StubUtil.GetReference<UnikIdType>(organisationUUID, ItemChoiceType.UUIDIdentifikator);
 
-            OrganisationRelationType organisationRelationType = new OrganisationRelationType();
+            OrganisationFlerRelationType organisationRelationType = new OrganisationFlerRelationType();
             organisationRelationType.Virkning = virkning;
             organisationRelationType.ReferenceID = orgReference;
 
@@ -410,11 +409,11 @@ namespace Organisation.IntegrationLayer
 
         internal AdresseFlerRelationType CreateAddressReference(string uuid, int indeks, string roleUuid, VirkningType virkning)
         {
-            UnikIdType type = new UnikIdType();
+            UuidLabelInputType type = new UuidLabelInputType();
             type.Item = UUIDConstants.ADDRESS_TYPE_ORGUNIT;
             type.ItemElementName = ItemChoiceType.UUIDIdentifikator;
 
-            UnikIdType role = new UnikIdType();
+            UuidLabelInputType role = new UuidLabelInputType();
             role.ItemElementName = ItemChoiceType.UUIDIdentifikator;
             role.Item = roleUuid;
 
@@ -488,6 +487,9 @@ namespace Organisation.IntegrationLayer
 
             int referencesCount = references.Count;
             registration.RelationListe.Adresser = new AdresseFlerRelationType[referencesCount];
+
+            // we want prime=true first, so we compare y to x because false is sorted before true otherwise
+            references.Sort((x, y) => y.Prime.CompareTo(x.Prime));
 
             for (int i = 0; i < referencesCount; i++)
             {
@@ -586,34 +588,11 @@ namespace Organisation.IntegrationLayer
         {
             return StubUtil.GetReference<UnikIdType>(StubUtil.GetMunicipalityOrganisationUUID(), ItemChoiceType.UUIDIdentifikator);
         }
-
-        internal OrganisationEnhedPortTypeClient CreatePort()
-        {
-            BasicHttpBinding binding = new BasicHttpBinding();
-            binding.Security.Mode = BasicHttpSecurityMode.Transport;
-            binding.Security.Transport.ClientCredentialType = HttpClientCredentialType.Certificate;
-            binding.MaxReceivedMessageSize = Int32.MaxValue;
-            binding.OpenTimeout = new TimeSpan(0, 3, 0);
-            binding.CloseTimeout = new TimeSpan(0, 3, 0);
-            binding.ReceiveTimeout = new TimeSpan(0, 3, 0);
-            binding.SendTimeout = new TimeSpan(0, 3, 0);
-
-            OrganisationEnhedPortTypeClient port = new OrganisationEnhedPortTypeClient(binding, StubUtil.GetEndPointAddress("OrganisationEnhed/5"));
-            port.ClientCredentials.ClientCertificate.Certificate = CertificateLoader.LoadCertificateAndPrivateKeyFromFile();
-
-            // Disable revocation checking
-            if (registryProperties.DisableRevocationCheck)
-            {
-                port.ClientCredentials.ServiceCertificate.Authentication.RevocationMode = X509RevocationMode.NoCheck;
-            }
-
-            return port;
-        }
     }
 
-    internal class KlasseFlerRelationTypeComparer : IEqualityComparer<KlasseFlerRelationType>
+    internal class OpgaverFlerRelationTypeComparer : IEqualityComparer<OpgaverFlerRelationType>
     {
-        public bool Equals([AllowNull] KlasseFlerRelationType x, [AllowNull] KlasseFlerRelationType y)
+        public bool Equals([AllowNull] OpgaverFlerRelationType x, [AllowNull] OpgaverFlerRelationType y)
         {
             if (string.Compare(x?.ReferenceID?.Item, y?.ReferenceID?.Item) == 0)
             {
@@ -623,7 +602,7 @@ namespace Organisation.IntegrationLayer
             return false;
         }
 
-        public int GetHashCode([DisallowNull] KlasseFlerRelationType obj)
+        public int GetHashCode([DisallowNull] OpgaverFlerRelationType obj)
         {
             if (obj?.ReferenceID?.Item == null)
             {

@@ -138,6 +138,7 @@ namespace Organisation.BusinessLayer
                     Cpr = user.Person.Cpr,
                     Name = user.Person.Name
                 };
+                registration.Status = user.Status;
 
                 foreach (var position in user.Positions)
                 {

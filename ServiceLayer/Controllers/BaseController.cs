@@ -9,12 +9,7 @@ namespace Organisation.ServiceLayer
 
         protected string AuthorizeAndFetchCvr(string cvr, string apiKey)
         {
-            if (!ApiKeyFilter.ValidApiKey(apiKey))
-            {
-                return null;
-            }
-
-            string defaultCvr = OrganisationRegistryProperties.GetInstance().DefaultMunicipality;
+            string defaultCvr = OrganisationRegistryProperties.AppSettings.Cvr;
             if (!string.IsNullOrEmpty(defaultCvr)) {
                 if (!string.IsNullOrEmpty(cvr) && !cvr.Equals(defaultCvr)) {
                     log.Warn("CVR supplied through HTTP HEADER (" + cvr + ") was overwritten by configured default (" + defaultCvr + ")");

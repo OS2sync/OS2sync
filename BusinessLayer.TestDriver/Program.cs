@@ -2,6 +2,7 @@
 using Organisation.BusinessLayer.DTO.Registration;
 using Organisation.IntegrationLayer;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Organisation.BusinessLayer.TestDriver
 {
@@ -14,40 +15,40 @@ namespace Organisation.BusinessLayer.TestDriver
 
         private static void InitEnvironment()
         {
-            System.Environment.SetEnvironmentVariable("ClientCertPath", "z:/dropbox/foces/PocIntegrator.pfx");
-            System.Environment.SetEnvironmentVariable("ClientCertPassword", "Test1234");
+            System.Environment.SetEnvironmentVariable("ClientSettings__WscKeystoreLocation", "c:/certifikater/keystore.pfx");
+            System.Environment.SetEnvironmentVariable("ClientSettings__WscKeystorePassword", "xxxxxxx");
+            System.Environment.SetEnvironmentVariable("LogSettings__LogRequestResponse", "true");
+            System.Environment.SetEnvironmentVariable("StsSettings__StsCertificateLocation", Path.Combine(Directory.GetCurrentDirectory(), "../../../../Resources/cert/test-sts.cer"));
+            System.Environment.SetEnvironmentVariable("ServiceSettings__WspCertificateLocation", Path.Combine(Directory.GetCurrentDirectory(), "../../../../Resources/cert/test-sf1500.cer"));
             System.Environment.SetEnvironmentVariable("Environment", "TEST");
-            System.Environment.SetEnvironmentVariable("Municipality", "29189838");
-            System.Environment.SetEnvironmentVariable("DisableRevocationCheck", "true");
-            System.Environment.SetEnvironmentVariable("LogLevel", "INFO");
-            System.Environment.SetEnvironmentVariable("LogRequestResponse", "true");
+            System.Environment.SetEnvironmentVariable("Cvr", "29189978");
+            System.Environment.SetEnvironmentVariable("TrustAllCertificates", "true");
 
             Initializer.Init();
 
             // hack to ensure random org-uuid to avoid data conflicts
-            OrganisationRegistryProperties.GetInstance().MunicipalityOrganisationUUID.Remove(System.Environment.GetEnvironmentVariable("Municipality"));
-            OrganisationRegistryProperties.GetInstance().MunicipalityOrganisationUUID.Add(System.Environment.GetEnvironmentVariable("Municipality"), Guid.NewGuid().ToString().ToLower());
+            OrganisationRegistryProperties.MunicipalityOrganisationUUID.Remove(System.Environment.GetEnvironmentVariable("Cvr"));
+            OrganisationRegistryProperties.MunicipalityOrganisationUUID.Add(System.Environment.GetEnvironmentVariable("Cvr"), Guid.NewGuid().ToString().ToLower());
         }
 
         static void Main(string[] args)
         {
             InitEnvironment();
 
-            /* ordinary tests
+            /* ordinary tests */
+            TestCreateAndUpdateFullUser();
             TestItSystems();
             TestListAndReadOUs();
             TestListAndReadUsers();
-            TestCreateAndUpdateFullUser();
+            TestSecondaryPost();
             TestCreateDeleteUpdateUser();
             TestCreateDeleteUpdateOU();
             TestCreateAndUpdateFullOU();
             TestUpdateWithoutChanges();
             TestPayoutUnits();
             TestPositions();
-            TestContactPlaces();
             TestUpdateAndSearch();
             TestMultipleAddresses();
-            */
 
             System.Environment.Exit(0);
         }
@@ -147,9 +148,8 @@ namespace Organisation.BusinessLayer.TestDriver
         private static void TestListAndReadUsers()
         {
             // small hack to ensure this test passes (the search parameters will find all users in the organisation, and we need to test that it hits the required amount)
-            OrganisationRegistryProperties properties = OrganisationRegistryProperties.GetInstance();
-            string oldUuid = properties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()];
-            properties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] = Uuid();
+            string oldUuid = OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()];
+            OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] = Uuid();
 
             UserRegistration registration1 = UserReg();
             registration1.UserId = "userId1";
@@ -291,15 +291,14 @@ namespace Organisation.BusinessLayer.TestDriver
                 }
             }
 
-            properties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] = oldUuid;
+            OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] = oldUuid;
         }
 
         private static void TestListAndReadOUs()
         {
             // small hack to ensure this test passes (the search parameters will find all ous in the organisation, and we need to test that it hits the required amount)
-            OrganisationRegistryProperties properties = OrganisationRegistryProperties.GetInstance();
-            string oldUuid = properties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()];
-            properties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] = Uuid();
+            string oldUuid = OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()];
+            OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] = Uuid();
 
             OrgUnitRegistration registration1 = OUReg();
             registration1.Name = "magic";
@@ -376,65 +375,8 @@ namespace Organisation.BusinessLayer.TestDriver
                 }
             }
 
-            properties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] = oldUuid;
+            OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()] = oldUuid;
         }
-
-        /* TODO: implement
-        private static void TestContactPlaces()
-        {
-            OrgUnitRegistration registration = OUReg();
-            registration.ContactPlaces.Add(new ContactPlace()
-            {
-                OrgUnitUuid = Guid.NewGuid().ToString().ToLower(),
-                Tasks = new List<string>() { Guid.NewGuid().ToString().ToLower(), Guid.NewGuid().ToString().ToLower() }
-            });
-
-            orgUnitService.Update(registration);
-            var ou = inspectorService.ReadOUObject(registration.Uuid);
-
-            // 1 contact place with 2 KLE's
-            ValidateOU(ou, registration);
-
-            registration.ContactPlaces.Add(new ContactPlace()
-            {
-                OrgUnitUuid = Guid.NewGuid().ToString().ToLower(),
-                Tasks = new List<string>() { Guid.NewGuid().ToString().ToLower(), Guid.NewGuid().ToString().ToLower() }
-            });
-
-            orgUnitService.Update(registration);
-            ou = inspectorService.ReadOUObject(registration.Uuid);
-
-            // 2 contact places (1 new) with 2 KLE's, same KLE as before in the old one, and new in the new one
-            ValidateOU(ou, registration);
-
-            registration.ContactPlaces.Clear();
-            orgUnitService.Update(registration);
-            ou = inspectorService.ReadOUObject(registration.Uuid);
-
-            // removed the two old contact places, so now we have zero
-            ValidateOU(ou, registration);
-
-            registration.ContactPlaces.Add(new ContactPlace()
-            {
-                OrgUnitUuid = Guid.NewGuid().ToString().ToLower(),
-                Tasks = new List<string>() { Guid.NewGuid().ToString().ToLower(), Guid.NewGuid().ToString().ToLower() }
-            });
-            orgUnitService.Update(registration);
-            ou = inspectorService.ReadOUObject(registration.Uuid);
-
-            // added a new one
-            ValidateOU(ou, registration);
-
-            registration.ContactPlaces[0].Tasks.Clear();
-            registration.ContactPlaces[0].Tasks.Add(Guid.NewGuid().ToString().ToLower());
-
-            orgUnitService.Update(registration);
-            ou = inspectorService.ReadOUObject(registration.Uuid);
-
-            // changed the tasks on the single contact place
-            ValidateOU(ou, registration);
-        }
-        */
 
         private static void TestPositions()
         {
@@ -730,6 +672,55 @@ namespace Organisation.BusinessLayer.TestDriver
 
             userService.Update(userRegistration);
             userService.Update(userRegistration);
+        }
+
+        private static void TestSecondaryPost()
+        {
+            string primePost = "Skovvej 21a, 8000 Aarhus C";
+            string secondaryPost = "Skovvej 21b, 8000 Aarhus C";
+
+            OrgUnitRegistration registration = OUReg();
+            registration.Post = primePost;
+            registration.PostSecondary = secondaryPost;
+            orgUnitService.Update(registration);
+
+            var ou = orgUnitService.Read(registration.Uuid);
+            if (!primePost.Equals(ou.Post))
+            {
+                throw new Exception("Mismatch on prime post address. Got " + ou.Post + " expected " + primePost);
+            }
+            if (!secondaryPost.Equals(ou.PostSecondary))
+            {
+                throw new Exception("Mismatch on secondary post address. Got " + ou.PostSecondary + " expected " + secondaryPost);
+            }
+
+            registration.Post = primePost;
+            registration.PostSecondary = null;
+            orgUnitService.Update(registration);
+
+            ou = orgUnitService.Read(registration.Uuid);
+            if (!primePost.Equals(ou.Post))
+            {
+                throw new Exception("Mismatch on prime post address. Got " + ou.Post + " expected " + primePost);
+            }
+            if (ou.PostSecondary != null)
+            {
+                throw new Exception("Mismatch on secondary post address. Got " + ou.PostSecondary + " expected null");
+            }
+
+            registration.Post = secondaryPost;
+            registration.PostSecondary = primePost;
+            orgUnitService.Update(registration);
+
+            ou = orgUnitService.Read(registration.Uuid);
+            if (!secondaryPost.Equals(ou.Post))
+            {
+                throw new Exception("Mismatch on prime post address. Got " + ou.Post + " expected " + secondaryPost);
+            }
+            if (!primePost.Equals(ou.PostSecondary))
+            {
+                throw new Exception("Mismatch on secondary post address. Got " + ou.PostSecondary + " expected " + primePost);
+            }
         }
 
         private static void TestCreateDeleteUpdateOU()

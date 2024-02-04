@@ -36,6 +36,7 @@ namespace Organisation.BusinessLayer.DTO.Registration
         public string Url { get; set; }
         public string Landline { get; set; }
         public string Post { get; set; }
+        public string PostSecondary { get; set; }
         public string FOA { get; set; }
         public string PNR { get; set; }
         public string SOR { get; set; }
