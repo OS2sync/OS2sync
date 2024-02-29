@@ -12,7 +12,7 @@ namespace Organisation.IntegrationLayer
         public List<string> DisableUdbetalingsenheder { get; set; } = new List<string>() { "true" };
 
         // SOR is ignored by default
-        public List<string> IgnoredAddressTypes { get; set; } = new List<string>() { "b44138cf-72df-45d1-8821-83db39b62093" };
+        public List<string> IgnoredOUAddressTypes { get; set; } = new List<string>() { "SOR" };
         public string DBConnectionString { get; set; }
         public string DBType { get; set; } = "MSSQL";
         public string DBMigrationPath { get; set; }

@@ -140,9 +140,9 @@ namespace Organisation.SchedulingLayer
             return users;
         }
 
-        public List<UserRegistrationExtended> GetSuccessEntries(String uuid)
+        public UserRegistrationExtended GetLastSuccessEntry(String uuid)
         {
-            var users = new List<UserRegistrationExtended>();
+            UserRegistrationExtended user = null;
 
             using (DbConnection connection = DaoUtil.GetConnection())
             {
@@ -156,7 +156,7 @@ namespace Organisation.SchedulingLayer
                     {
                         while (reader.Read())
                         {
-                            UserRegistrationExtended user = new UserRegistrationExtended();
+                            user = new UserRegistrationExtended();
                             long user_id = (long)reader["id"];
                             user.Id = user_id;
 
@@ -177,12 +177,12 @@ namespace Organisation.SchedulingLayer
                             user.Timestamp = (DateTime)reader["timestamp"];
                             user.Operation = (OperationType)Enum.Parse(typeof(OperationType), GetValue(reader, "operation"));
 
-                            users.Add(user);
+                            break;
                         }
                     }
                 }
 
-                foreach (var user in users)
+                if (user != null)
                 {
                     // read positions
                     using (DbCommand command = DaoUtil.GetCommand(UserStatements.SelectSuccessPositions, connection))
@@ -206,7 +206,7 @@ namespace Organisation.SchedulingLayer
                 }
             }
 
-            return users;
+            return user;
         }
 
         public void Delete(long id)
@@ -233,6 +233,20 @@ namespace Organisation.SchedulingLayer
                 {
                     command.Parameters.Add(DaoUtil.GetParameter("@id", id));
                     command.Parameters.Add(DaoUtil.GetParameter("@skipped", skippedDueToCache));
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public void LowerPriority(long id)
+        {
+            using (DbConnection connection = DaoUtil.GetConnection())
+            {
+                connection.Open();
+
+                using (DbCommand command = DaoUtil.GetCommand(UserStatements.LowerPriority, connection))
+                {
+                    command.Parameters.Add(DaoUtil.GetParameter("@id", id));
                     command.ExecuteNonQuery();
                 }
             }

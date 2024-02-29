@@ -3,6 +3,7 @@ namespace OS2syncAD
 {
     public class Filter
     {
+        private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private ADUtils ADUtils;
 
         public Filter(ADUtils adUtils)
@@ -27,6 +28,11 @@ namespace OS2syncAD
 
             if (isFictive || isBlocked)
             {
+                if (AppConfiguration.CleanupOUJobDryRun)
+                {
+                    log.Info("Filtering " + ou.ADAttributes.DistinguishedName + " : fictive=" + isFictive + ", blocked=" + isBlocked);
+                }
+
                 return false;
             }
 

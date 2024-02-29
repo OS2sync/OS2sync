@@ -12,7 +12,7 @@ namespace Organisation.SchedulingLayer
     [DisallowConcurrentExecution]
     public class SyncJob : IJob
     {
-        private enum SyncResult { Processed, TemporaryFailure, SkippedDueToCache, PermanentFailed }
+        private enum SyncResult { Processed, TemporaryFailure, SkippedDueToCache, PermanentFailed, KmdRollbackException }
 
         private static log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private static DateTime nextRun = DateTime.MinValue;
@@ -77,7 +77,7 @@ namespace Organisation.SchedulingLayer
         {
             UserService service = new UserService();
             UserDao dao = new UserDao();
-            int transferCount = 0, failureCount = 0, cacheCount = 0;
+            int transferCount = 0, failureCount = 0, cacheCount = 0, kmdRollbackCount = 0;
             bool temporaryFailure = false;
             int totalCount = 0;
 
@@ -121,6 +121,12 @@ namespace Organisation.SchedulingLayer
                                     }
                                     errorCount = 0;
                                     break;
+                                case SyncResult.KmdRollbackException:
+                                    lock (users)
+                                    {
+                                        kmdRollbackCount++;
+                                    }
+                                    break;
                             }
                         }
                         else
@@ -146,11 +152,18 @@ namespace Organisation.SchedulingLayer
                 users = dao.GetOldestEntries();
             }
 
-            if (transferCount > 0 || failureCount > 0 || cacheCount > 0)
+            if (transferCount > 0 || failureCount > 0 || cacheCount > 0 || kmdRollbackCount > 0)
             {
-                int total = transferCount + failureCount + cacheCount;
+                int total = transferCount + failureCount + cacheCount + kmdRollbackCount;
 
-                log.Info("Processed " + total + " user(s): success=" + transferCount + ", failure=" + failureCount + ", cacheSkip=" + cacheCount);
+                if (kmdRollbackCount > 0)
+                {
+                    log.Info("Processed " + total + " user(s): kmdRollbackCount=" + kmdRollbackCount + ", success = " + transferCount + ", failure=" + failureCount + ", cacheSkip=" + cacheCount);
+                }
+                else
+                {
+                    log.Info("Processed " + total + " user(s): success = " + transferCount + ", failure=" + failureCount + ", cacheSkip=" + cacheCount);
+                }
             }
 
             // indicate to main control that we should sleep a short while before trying again
@@ -175,21 +188,15 @@ namespace Organisation.SchedulingLayer
                 {
                     if (user.Operation.Equals(OperationType.UPDATE))
                     {
-                        // TODO: verify this works before we enable
-                        /*
                         // check for no changes
                         if (!user.BypassCache)
                         {
-                            var succesUsers = dao.GetSuccessEntries(user.Uuid);
-                            var userToCompare = succesUsers.Where(user => user.Operation.Equals(OperationType.UPDATE)).OrderBy(user => user.Id).LastOrDefault();
-                            if (userToCompare != null)
+                            var succesUser = dao.GetLastSuccessEntry(user.Uuid);
+                            if (succesUser != null)
                             {
-                                string jsonUserToCompare = JsonSerializer.Serialize(userToCompare);
-                                string jsonUser = JsonSerializer.Serialize(user);
-                                identicalToLastSuccess = jsonUserToCompare.Equals(jsonUser);
+                                identicalToLastSuccess = user.SyncEquals(succesUser);
                             }
                         }
-                        */
                     }
 
                     if (!identicalToLastSuccess)
@@ -216,7 +223,17 @@ namespace Organisation.SchedulingLayer
             }
             catch (Exception ex)
             {
-                log.Error("Could not handle user '" + user.Uuid + "'", ex);
+                // TODO: this is a hack - we get this sporadically on calls to Import on Bruger,
+                // and we don't want to to be handled as errors, but we also don't want them to block
+                // calls on other users, so we lower priority, and log it as a special kind of error
+                if (ex is AggregateException && ex.Message.Contains("Could not commit transaction"))
+                {
+                    log.Debug("Got Rollback error from KMD on " + user.Uuid + " / " + user.Cvr, ex);
+                    dao.LowerPriority(user.Id);
+                    return SyncResult.KmdRollbackException;
+                }
+
+                log.Error("Could not handle user " + user.Uuid + " / " + user.Cvr, ex);
                 dao.OnFailure(user.Id, ex.Message);
                 dao.Delete(user.Id);
 
@@ -317,7 +334,7 @@ namespace Organisation.SchedulingLayer
                 {
                     if (ou.Operation.Equals(OperationType.UPDATE))
                     {
-                        // TODO: verify this works before we enable
+                        // TODO: implement this at some point. Not super important, but look at how we did it for users
                         /*
                         // check for no changes
                         if (!ou.BypassCache)

@@ -218,6 +218,8 @@ namespace Organisation.IntegrationLayer
 
         private static void InitLog()
         {
+            var logRepository = (log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository(Assembly.GetEntryAssembly());
+
             PatternLayout patternLayout = new PatternLayout();
             patternLayout.ConversionPattern = "%date - %-5level %logger - %message%newline";
             patternLayout.ActivateOptions();
@@ -226,7 +228,8 @@ namespace Organisation.IntegrationLayer
             appender.Layout = patternLayout;
             appender.ActivateOptions();
 
-            var logRepository = (log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository(Assembly.GetEntryAssembly());
+            log4net.Util.LogLog.InternalDebugging = true;
+
             logRepository.Root.AddAppender(appender);
 
             if (!string.IsNullOrEmpty(AppSettings.LogSettings.LogFile))
@@ -234,7 +237,8 @@ namespace Organisation.IntegrationLayer
                 RollingFileAppender fileAppender = new RollingFileAppender();
                 fileAppender.AppendToFile = true;
                 fileAppender.File = AppSettings.LogSettings.LogFile;
-                fileAppender.MaxFileSize = 10;
+                fileAppender.Layout = patternLayout;
+                fileAppender.MaxSizeRollBackups = 10;
                 fileAppender.RollingStyle = RollingFileAppender.RollingMode.Size;
                 fileAppender.MaximumFileSize = "1000KB";
                 fileAppender.StaticLogFileName = true;

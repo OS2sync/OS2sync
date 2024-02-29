@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.ServiceModel;
+using System.ServiceModel.Description;
 
 namespace Organisation.IntegrationLayer
 {
@@ -99,6 +100,10 @@ namespace Organisation.IntegrationLayer
                 VirkningType virkning = helper.GetVirkning(timestamp);
                 helper.SetTilstandToInactive(virkning, registration, timestamp);
 
+                // we cannot fix the actual data issue in FK Organisation, but we can remove them from
+                // the payload, so the validator does not reject our update *sigh*
+                removeDuplicateAddresses(registration);
+
                 retRequest request = new retRequest();
                 request.RetInput = input;
 
@@ -123,6 +128,46 @@ namespace Organisation.IntegrationLayer
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
             {
                 throw new ServiceNotFoundException("Failed to establish connection to the Ret service on Bruger", ex);
+            }
+        }
+
+        private void removeDuplicateAddresses(RegistreringType1 registration)
+        {
+            if (registration.RelationListe?.Adresser != null)
+            {
+                var toRemove = new List<int>();
+                var seen = new List<string>();
+
+                // identify elements to remove (duplicates)
+                for (int i = registration.RelationListe.Adresser.Length - 1; i >= 0; i--)
+                {
+                    if (seen.Contains(registration.RelationListe.Adresser[i].ReferenceID.Item))
+                    {
+                        toRemove.Add(i);
+                        continue;
+                    }
+
+                    seen.Add(registration.RelationListe.Adresser[i].ReferenceID.Item);
+                }
+
+                // copy those we want to keep into new array
+                if (toRemove.Count > 0)
+                {
+                    AdresseFlerRelationType[] addresses = new AdresseFlerRelationType[registration.RelationListe.Adresser.Length - toRemove.Count];
+
+                    int j = addresses.Length - 1;
+                    for (int i = registration.RelationListe.Adresser.Length - 1; i >= 0; i--)
+                    {
+                        if (toRemove.Contains(i))
+                        {
+                            continue;
+                        }
+
+                        addresses[j--] = registration.RelationListe.Adresser[i];
+                    }
+
+                    registration.RelationListe.Adresser = addresses;
+                }
             }
         }
 
@@ -393,6 +438,10 @@ namespace Organisation.IntegrationLayer
                     return;
                 }
 
+                // we cannot fix the actual data issue in FK Organisation, but we can remove them from
+                // the payload, so the validator does not reject our update *sigh*
+                removeDuplicateAddresses(registration);
+
                 // send Ret request
                 retRequest request = new retRequest();
                 request.RetInput = input;
@@ -504,7 +553,7 @@ namespace Organisation.IntegrationLayer
             }
         }
 
-        public List<string> Soeg()
+        public List<string> Soeg(int offset, int amount)
         {
             BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Soeg");
 
@@ -518,27 +567,17 @@ namespace Organisation.IntegrationLayer
             soegInput.TilstandListe.Gyldighed[0] = new GyldighedType();
             soegInput.TilstandListe.Gyldighed[0].GyldighedStatusKode = GyldighedStatusKodeType.Aktiv;
 
-            // TODO: these three lines should be removeable once KMD fixes their end
-            soegInput.TilstandListe.Gyldighed[0].Virkning = new VirkningType();
-            soegInput.TilstandListe.Gyldighed[0].Virkning.FraTidspunkt = new TidspunktType();
-            soegInput.TilstandListe.Gyldighed[0].Virkning.FraTidspunkt.Item = DateTime.Now;
-
             // only return objects that have a Tilhører relationship top-level Organisation
             UnikIdType orgReference = StubUtil.GetReference<UnikIdType>(OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()], ItemChoiceType.UUIDIdentifikator);
             OrganisationFlerRelationType organisationRelationType = new OrganisationFlerRelationType();
             organisationRelationType.ReferenceID = orgReference;
             soegInput.RelationListe.Tilhoerer = organisationRelationType;
 
-            /*
-            // TODO: see if this gives us what we want
-            soegInput.SoegRegistrering = new SoegRegistreringType();
-            soegInput.SoegRegistrering.FraTidspunkt = new TidspunktType();
-            soegInput.SoegRegistrering.FraTidspunkt.Item = new DateTime(2018, 8, 29, 14, 10, 00, DateTimeKind.Local);
-            */
-
             // search
             soegRequest request = new soegRequest();
             request.SoegInput = soegInput;
+            request.SoegInput.MaksimalAntalKvantitet = amount.ToString();
+            request.SoegInput.FoersteResultatReference = offset.ToString();
 
             try
             {

@@ -34,6 +34,22 @@ namespace Organisation.ServiceLayer
 
         private static IWebHost BuildWebHost()
         {
+            if (IntegrationLayer.OrganisationRegistryProperties.AppSettings.SslSettings.Enabled)
+            {
+                return new WebHostBuilder()
+                    .UseKestrel(options =>
+                    {
+                        options.Listen(IPAddress.Any, 5000, listenOptions =>
+                        {
+                            listenOptions.UseHttps(IntegrationLayer.OrganisationRegistryProperties.AppSettings.SslSettings.KeystorePath, IntegrationLayer.OrganisationRegistryProperties.AppSettings.SslSettings.KeystorePassword);
+                        });
+                    })
+                    .UseContentRoot(Directory.GetCurrentDirectory())
+                    .UseIISIntegration()
+                    .UseStartup<Startup>()
+                    .Build();
+            }
+
             return new WebHostBuilder()
                 .UseKestrel()
                 .UseContentRoot(Directory.GetCurrentDirectory())

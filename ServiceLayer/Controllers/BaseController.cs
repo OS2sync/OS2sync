@@ -9,6 +9,12 @@ namespace Organisation.ServiceLayer
 
         protected string AuthorizeAndFetchCvr(string cvr, string apiKey)
         {
+            if (!ValidApiKey(apiKey))
+            {
+                log.Warn("Rejected access because of wrong or missing ApiKey");
+                return null;
+            }
+
             string defaultCvr = OrganisationRegistryProperties.AppSettings.Cvr;
             if (!string.IsNullOrEmpty(defaultCvr)) {
                 if (!string.IsNullOrEmpty(cvr) && !cvr.Equals(defaultCvr)) {
@@ -21,12 +27,30 @@ namespace Organisation.ServiceLayer
             // if no CVR is supplied or configured, stop execution
             if (string.IsNullOrEmpty(cvr)) {
                 log.Warn("No CVR supplied or configured!");
-                throw new System.Exception("No CVR supplied or configured!");
+
+                return null;
             }
 
             OrganisationRegistryProperties.SetCurrentMunicipality(cvr);
 
             return OrganisationRegistryProperties.GetCurrentMunicipality();
+        }
+
+        private bool ValidApiKey(string apiKey)
+        {
+            // if no ApiKey is configured, it is always allowed to call API
+            if (string.IsNullOrEmpty(OrganisationRegistryProperties.AppSettings.ApiKey))
+            {
+                return true;
+            }
+
+            // check for match
+            if (string.Equals(OrganisationRegistryProperties.AppSettings.ApiKey, apiKey))
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }

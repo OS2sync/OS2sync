@@ -55,7 +55,7 @@ namespace OS2syncAD
             {
                 UserRegistration user = EventMapper.MapUser(adEvent);
 
-                UserDao.Save(user, EventMapper.Map(adEvent.OperationType), AppConfiguration.Cvr);
+                UserDao.Save(user, EventMapper.Map(adEvent.OperationType), false, 10, AppConfiguration.Cvr);
                 log.Debug("User (" + user.Person.Name + ", " + user.Uuid + ") " + adEvent.OperationType);
 
                 return (adEvent.OperationType == OperationType.Remove) ? ProcessingResult.USER_DELETE : ProcessingResult.USER_UPDATE;
@@ -64,7 +64,7 @@ namespace OS2syncAD
             {
                 OrgUnitRegistration orgUnit = EventMapper.MapOU(adEvent);
 
-                OrgUnitDao.Save(orgUnit, EventMapper.Map(adEvent.OperationType), AppConfiguration.Cvr);
+                OrgUnitDao.Save(orgUnit, EventMapper.Map(adEvent.OperationType), false, 10, AppConfiguration.Cvr);
                 log.Debug("OrgUnit (" + orgUnit.Name + ", " + orgUnit.Uuid + ") " + adEvent.OperationType + ". Parent = '" + orgUnit.ParentOrgUnitUuid + "'");
 
                 return (adEvent.OperationType == OperationType.Remove) ? ProcessingResult.OU_DELETE : ProcessingResult.OU_UPDATE;

@@ -1,7 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
-using Quartz;
+﻿using Quartz;
 using Quartz.Impl;
-using System.IO;
 using Topshelf;
 
 namespace OS2syncAD
@@ -15,11 +13,17 @@ namespace OS2syncAD
         {
             try
             {
+                log.Info("Starting OS2sync service - initializing BusinessLayer");
+
                 // Initialize BusinessLayer
                 Organisation.BusinessLayer.Initializer.Init();
 
-                // start scheduler
+                log.Info("Starting OS2sync service - initializing SchedulingLayer");
+
+                // Initialize SchedulingLayer
                 Organisation.SchedulingLayer.SyncJobRunner.InitAsync();
+
+                log.Info("Starting OS2sync service - initializing Task Runner");
 
                 // Grab the Scheduler instance from the Factory 
                 StdSchedulerFactory factory = new StdSchedulerFactory();
@@ -51,13 +55,14 @@ namespace OS2syncAD
                     // start 30 seconds after boot, and then run once every week
                     ITrigger trigger2 = TriggerBuilder.Create()
                         .WithIdentity("CleanupOrgUnitTrigger", "CleanupOrgUnitJob")
-//                        .StartAt(DateBuilder.FutureDate(120, IntervalUnit.Second))
                         .WithSchedule(CronScheduleBuilder.CronSchedule(AppConfiguration.CleanOUJobCron))
                         .ForJob(job2)
                         .Build();
 
                     sched.ScheduleJob(job2, trigger2);
                 }
+
+                log.Info("Starting OS2sync service - ready");
             }
             catch (SchedulerException se)
             {

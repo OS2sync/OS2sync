@@ -26,7 +26,7 @@ namespace OS2syncAD
         {
             get
             {
-                return configuration["DBConnectionString"];
+                return configuration["SchedulerSettings:DBConnectionString"];
             }
         }
 
@@ -34,7 +34,7 @@ namespace OS2syncAD
         {
             get
             {
-                return configuration["Municipality"];
+                return configuration["Cvr"];
             }
         }
 
@@ -46,11 +46,27 @@ namespace OS2syncAD
             }
         }
 
+        public static bool TerminateDisabledUsers
+        {
+            get
+            {
+                return "true".Equals(configuration["TerminateDisabledUsers"]);
+            }
+        }
+
         public static bool CleanupOUJobEnabled
         {
             get
             {
                 return "true".Equals(configuration["CleanupOUJobEnabled"]);
+            }
+        }
+
+        public static bool CleanupOUJobDryRun
+        {
+            get
+            {
+                return "true".Equals(configuration["CleanupOUJobDryRun"]);
             }
         }
 
@@ -150,6 +166,63 @@ namespace OS2syncAD
             get
             {
                 return configuration["AD:OrgUnitAttributes:Post"];
+            }
+        }
+
+        public static string OUAttributeContact
+        {
+            get
+            {
+                return configuration["AD:OrgUnitAttributes:Contact"];
+            }
+        }
+
+
+        public static string OUAttributeContactOpenHours
+        {
+            get
+            {
+                return configuration["AD:OrgUnitAttributes:ContactOpenHours"];
+            }
+        }
+
+        public static string OUAttributeEmailRemarks
+        {
+            get
+            {
+                return configuration["AD:OrgUnitAttributes:EmailRemarks"];
+            }
+        }
+
+        public static string OUAttributePostReturn
+        {
+            get
+            {
+                return configuration["AD:OrgUnitAttributes:PostReturn"];
+            }
+        }
+
+        public static string OUAttributePhoneOpenHours
+        {
+            get
+            {
+                return configuration["AD:OrgUnitAttributes:PhoneOpenHours"];
+            }
+        }
+
+        public static string OUAttributeUrl
+        {
+            get
+            {
+                return configuration["AD:OrgUnitAttributes:Url"];
+            }
+        }
+
+        public static string OUAttributeLandline
+        {
+            get
+            {
+                return configuration["AD:OrgUnitAttributes:Landline"];
             }
         }
         #endregion

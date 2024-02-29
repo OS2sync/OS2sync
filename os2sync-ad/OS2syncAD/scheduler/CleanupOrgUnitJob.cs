@@ -38,8 +38,8 @@ namespace OS2syncAD
         {
             List<FiltreretOejebliksbilledeType> allUnitRoles = new List<FiltreretOejebliksbilledeType>();
             List<ADEvent> adOUS = ReadAllOrgUnits();
-            List<OU> ous = inspectorService.ReadOUHierarchy(AppConfiguration.Cvr, out allUnitRoles, null, ReadTasks.NO, ReadManager.NO, ReadAddresses.NO, ReadPayoutUnit.NO, ReadPositions.NO, ReadContactForTasks.NO);
 
+            List<OU> ous = inspectorService.ReadOUHierarchy(AppConfiguration.Cvr, out allUnitRoles, null, ReadTasks.NO, ReadManager.NO, ReadAddresses.NO, ReadPayoutUnit.NO, ReadContactPlaces.NO, ReadPositions.NO, ReadContactForTasks.NO);
             foreach (var ou in ous) // OU's in FK Organisation
             {
                 if (adOUS.Find(o => o.ADAttributes.Uuid.Equals(ou.Uuid)) == null)
@@ -48,8 +48,15 @@ namespace OS2syncAD
                     OrgUnitRegistration orgUnit = new OrgUnitRegistration();
                     orgUnit.Uuid = ou.Uuid;
 
-                    OrgUnitDao.Save(orgUnit, global::Organisation.SchedulingLayer.OperationType.DELETE, AppConfiguration.Cvr);
-                    log.Debug($"CleanupTask Remove: OrgUnit:{ou.Name} UUID:{orgUnit.Uuid}");
+                    if (!(AppConfiguration.CleanupOUJobDryRun))
+                    {
+                        OrgUnitDao.Save(orgUnit, global::Organisation.SchedulingLayer.OperationType.DELETE, false, 10, AppConfiguration.Cvr);
+                        log.Debug($"CleanupTask Remove: OrgUnit:{ou.Name} UUID:{orgUnit.Uuid}");
+                    }
+                    else
+                    {
+                        log.Info($"CleanupTask DryRun Remove: OrgUnit:{ou.Name} UUID:{orgUnit.Uuid}");
+                    }
                 }
             }
 
@@ -73,7 +80,7 @@ namespace OS2syncAD
             attributes.CopyTo(attributesArray);
 
             DirectorySearcher directorySearcher = new DirectorySearcher("(&((objectClass=organizationalUnit))(!(objectClass=computer)))", attributesArray);
-            directorySearcher.SizeLimit = 500;
+            directorySearcher.PageSize = 500;
 
             return directorySearcher;
         }

@@ -133,6 +133,11 @@ namespace OS2syncAD
                 attributes.Add("ou");
                 attributes.Add("sAMAccountName");
 
+                if (AppConfiguration.TerminateDisabledUsers)
+                {
+                    attributes.Add("useraccountcontrol");
+                }
+
                 attributes.Add(AppConfiguration.OUAttributeFiltered);
                 attributes.Add(AppConfiguration.OUAttributeEan);
                 attributes.Add(AppConfiguration.OUAttributeDtrId);
@@ -144,6 +149,13 @@ namespace OS2syncAD
                 attributes.Add(AppConfiguration.OUAttributePhone);
                 attributes.Add(AppConfiguration.OUAttributeLOSId);
                 attributes.Add(AppConfiguration.OUAttributePost);
+                attributes.Add(AppConfiguration.OUAttributeContact);
+                attributes.Add(AppConfiguration.OUAttributeContactOpenHours);
+                attributes.Add(AppConfiguration.OUAttributeEmailRemarks);
+                attributes.Add(AppConfiguration.OUAttributePostReturn);
+                attributes.Add(AppConfiguration.OUAttributePhoneOpenHours);
+                attributes.Add(AppConfiguration.OUAttributeUrl);
+                attributes.Add(AppConfiguration.OUAttributeLandline);
                 attributes.Add(AppConfiguration.UserAttributeLocation);
                 attributes.Add(AppConfiguration.UserAttributeMail);
                 attributes.Add(AppConfiguration.UserAttributePersonCpr);

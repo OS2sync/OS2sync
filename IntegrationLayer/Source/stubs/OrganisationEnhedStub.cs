@@ -711,7 +711,7 @@ namespace Organisation.IntegrationLayer
             }
         }
 
-        public List<string> Soeg(string antal = null, string offset = null)
+        public List<string> Soeg(int offset, int amount)
         {
             OrganisationEnhedPortType channel = StubUtil.CreateChannel<OrganisationEnhedPortType>(OrganisationEnhedStubHelper.SERVICE, "Soeg");
 
@@ -720,29 +720,17 @@ namespace Organisation.IntegrationLayer
             soegInput.RelationListe = new RelationListeType();
             soegInput.TilstandListe = new TilstandListeType();
 
-            if (antal != null)
-            {
-                soegInput.MaksimalAntalKvantitet = antal;
-            }
-            if (offset != null)
-            {
-                soegInput.FoersteResultatReference = offset;
-            }
+            soegInput.MaksimalAntalKvantitet = amount.ToString();
+            soegInput.FoersteResultatReference = offset.ToString();
 
             // only search for Active units
             soegInput.TilstandListe.Gyldighed = new GyldighedType[1];
             soegInput.TilstandListe.Gyldighed[0] = new GyldighedType();
             soegInput.TilstandListe.Gyldighed[0].GyldighedStatusKode = GyldighedStatusKodeType.Aktiv;
 
-            // TODO: these three lines should be removeable once KMD fixes their end
-            soegInput.TilstandListe.Gyldighed[0].Virkning = new VirkningType();
-            soegInput.TilstandListe.Gyldighed[0].Virkning.FraTidspunkt = new TidspunktType();
-            soegInput.TilstandListe.Gyldighed[0].Virkning.FraTidspunkt.Item = DateTime.Now;
-
             // only return objects that have a Tilhører relationship top-level Organisation
             UnikIdType orgReference = StubUtil.GetReference<UnikIdType>(OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()], ItemChoiceType.UUIDIdentifikator);
 
-            // TODO: this was changed to a FlerRelationType - but it is still a single-ref, so whats up with that? Test that this works
             OrganisationFlerRelationType organisationFlerRelationType = new OrganisationFlerRelationType();
             organisationFlerRelationType.ReferenceID = orgReference;
             soegInput.RelationListe.Tilhoerer = organisationFlerRelationType;

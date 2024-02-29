@@ -380,22 +380,44 @@ namespace Organisation.BusinessLayer
             List<AddressRelation> addressRefs = new List<AddressRelation>();
             string uuid;
 
-            ServiceHelper.UpdateAddress(registration.PhoneNumber, orgPhoneUuid, registration.Timestamp, out uuid);
-            if (uuid != null)
+            if (!OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Contains("PHONE"))
+            {
+                ServiceHelper.UpdateAddress(registration.PhoneNumber, orgPhoneUuid, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.PHONE
+                    });
+                }
+            }
+            else if (orgPhoneUuid != null)
             {
                 addressRefs.Add(new AddressRelation()
                 {
-                    Uuid = uuid,
+                    Uuid = orgPhoneUuid,
                     Type = AddressRelationType.PHONE
                 });
             }
 
-            ServiceHelper.UpdateAddress(registration.Email, orgEmailUuid, registration.Timestamp, out uuid);
-            if (uuid != null)
+            if (!OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Contains("EMAIL"))
+            {
+                ServiceHelper.UpdateAddress(registration.Email, orgEmailUuid, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.EMAIL
+                    });
+                }
+            }
+            else if (orgEmailUuid != null)
             {
                 addressRefs.Add(new AddressRelation()
                 {
-                    Uuid = uuid,
+                    Uuid = orgEmailUuid,
                     Type = AddressRelationType.EMAIL
                 });
             }
@@ -410,12 +432,24 @@ namespace Organisation.BusinessLayer
                 });
             }
 
-            ServiceHelper.UpdateAddress(registration.DtrId, orgDtrIdUuid, registration.Timestamp, out uuid);
-            if (uuid != null)
+            if (!OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Contains("DTRID"))
+            {
+
+                ServiceHelper.UpdateAddress(registration.DtrId, orgDtrIdUuid, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.DTR_ID
+                    });
+                }
+            }
+            else if (orgDtrIdUuid != null)
             {
                 addressRefs.Add(new AddressRelation()
                 {
-                    Uuid = uuid,
+                    Uuid = orgDtrIdUuid,
                     Type = AddressRelationType.DTR_ID
                 });
             }
@@ -430,15 +464,28 @@ namespace Organisation.BusinessLayer
                 });
             }
 
-            ServiceHelper.UpdateAddress(registration.Ean, orgEanUuid, registration.Timestamp, out uuid);
-            if (uuid != null)
+            if (!OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Contains("EAN"))
+            {
+
+                ServiceHelper.UpdateAddress(registration.Ean, orgEanUuid, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.EAN
+                    });
+                }
+            }
+            else if (orgEanUuid != null)
             {
                 addressRefs.Add(new AddressRelation()
                 {
-                    Uuid = uuid,
+                    Uuid = orgEanUuid,
                     Type = AddressRelationType.EAN
                 });
             }
+
 
             ServiceHelper.UpdateAddress(registration.LOSId, orgLosIdUuid, registration.Timestamp, out uuid);
             if (uuid != null)
@@ -552,19 +599,32 @@ namespace Organisation.BusinessLayer
                 });
             }
 
-            ServiceHelper.UpdateAddress(registration.PNR, orgPNRUuid, registration.Timestamp, out uuid);
-            if (uuid != null)
+            // only update if not ignored, otherwise keep reference if exists, else do nothing
+            if (!OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Contains("PNR"))
             {
+
+                ServiceHelper.UpdateAddress(registration.PNR, orgPNRUuid, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.PNR
+                    });
+                }
+            }
+            else if (orgPNRUuid != null)
+            {
+                // just keep the old reference if one is available
                 addressRefs.Add(new AddressRelation()
                 {
-                    Uuid = uuid,
+                    Uuid = orgPNRUuid,
                     Type = AddressRelationType.PNR
                 });
             }
 
-            // special case - only update if we actually have a value locally, as the SOR registry
-            // is also maintained by 3rd party integrations from KOMBIT
-            if (!string.IsNullOrEmpty(registration.SOR))
+            // only update if not ignored, otherwise keep reference if exists, else do nothing
+            if (!OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Contains("SOR"))
             {
                 ServiceHelper.UpdateAddress(registration.SOR, orgSORUuid, registration.Timestamp, out uuid);
                 if (uuid != null)
@@ -578,7 +638,7 @@ namespace Organisation.BusinessLayer
             }
             else if (orgSORUuid != null)
             {
-                // special case - keep the old reference even if no SOR is given locally
+                // just keep the old reference if one is available
                 addressRefs.Add(new AddressRelation()
                 {
                     Uuid = orgSORUuid,

@@ -3,6 +3,9 @@ using Organisation.SchedulingLayer;
 using System;
 using Microsoft.AspNetCore.Mvc;
 using Organisation.BusinessLayer.DTO.Registration;
+using System.Collections.Generic;
+using Organisation.BusinessLayer.DTO.Read;
+using System.Linq;
 
 namespace Organisation.ServiceLayer
 {
@@ -76,6 +79,97 @@ namespace Organisation.ServiceLayer
             return Ok();
         }
 
+        [HttpPost("cleanup")]
+        public IActionResult Cleanup([FromBody] string[] existingUsers, [FromHeader] string cvr, [FromHeader] string apiKey, [FromQuery] bool dryrun = false)
+        {
+            if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                log.Info("Starting user cleanup for " + cvr);
+
+                log.Info("Got payload with " + existingUsers.Length + " existing users from source system");
+
+                var result = userService.List();
+
+                log.Info("Found " + result.Count + " users in FK Organisation");
+
+                int count = 0;
+                foreach (string uuidInFk in result)
+                {
+                    if (!existingUsers.Contains(uuidInFk))
+                    {
+                        UserRegistrationExtended reg = new UserRegistrationExtended()
+                        {
+                            Uuid = uuidInFk
+                        };
+
+                        if (dryrun)
+                        {
+                            log.Info("Would have deleted " +  uuidInFk + " but did not, becuse dryrun=true was supplied as a query parameter");
+                        }
+                        else
+                        {
+                            log.Info("Queueing delete on " + uuidInFk);
+                            userDao.Save(reg, OperationType.DELETE, false, 12, cvr);
+                        }
+
+                        count++;
+                    }
+                }
+
+                log.Info("Found " + count + " users in FK Organisation that needed to be deleted");
+                count = 0;
+
+                List<string> usersNotInFK = new List<string>();
+                foreach (string uuidInLocal in existingUsers)
+                {
+                    if (!result.Contains(uuidInLocal))
+                    {
+                        usersNotInFK.Add(uuidInLocal);
+                        count++;
+                    }
+                }
+
+                log.Info("Found " + count + " users in source system that does not exist in FK Organisation");
+
+                log.Info("Completed user cleanup for " + cvr);
+
+                return Ok(usersNotInFK);
+            }
+            catch (Exception ex)
+            {
+                log.Error("Failed to perform cleanup", ex);
+
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("all")]
+        public IActionResult ReadAll([FromHeader] string cvr, [FromHeader] string apiKey)
+        {
+            if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                var result = userService.List();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                log.Error("Failed to bulkread users", ex);
+
+                return BadRequest(ex.Message);
+            }
+        }
+
         [HttpGet("{uuid}")]
         public IActionResult Read(string uuid, [FromHeader] string cvr, [FromHeader] string apiKey)
         {
@@ -130,7 +224,7 @@ namespace Organisation.ServiceLayer
                 return "Positions is null or empty";
             }
 
-            foreach (Position position in user.Positions)
+            foreach (var position in user.Positions)
             {
                 if (string.IsNullOrEmpty(position.Name) ||string.IsNullOrEmpty(position.OrgUnitUuid))
                 {

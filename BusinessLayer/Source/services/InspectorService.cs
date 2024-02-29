@@ -1006,7 +1006,16 @@ namespace Organisation.BusinessLayer
             }
             else
             {
-                result = brugerStub.Soeg();
+                int amount = 500, offset = 0;
+
+                var res = brugerStub.Soeg(offset, amount);
+                while (res.Count > 0)
+                {
+                    result.AddRange(res);
+
+                    offset += amount;
+                    res = brugerStub.Soeg(offset, amount);
+                }
             }
 
             return result;
@@ -1014,7 +1023,19 @@ namespace Organisation.BusinessLayer
 
         public List<string> FindAllOUs()
         {
-            return organisationEnhedStub.Soeg();
+            List<string> result = new List<string>();
+            int amount = 500, offset = 0;
+
+            var res = organisationEnhedStub.Soeg(offset, amount);
+            while (res.Count > 0)
+            {
+                result.AddRange(res);
+
+                offset += amount;
+                res = organisationEnhedStub.Soeg(offset, amount);
+            }
+
+            return result;
         }
 
         public List<User> ReadUsers(string cvr, List<string> users, List<FiltreretOejebliksbilledeType> allUnitRoles, Func<long, long, bool> progressCallback, ReadAddresses readAddresses = ReadAddresses.YES, ReadParentDetails readParentDetails = ReadParentDetails.NO)

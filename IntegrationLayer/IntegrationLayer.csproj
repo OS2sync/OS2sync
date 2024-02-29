@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Digst.OioIdws.WscCore" Version="4.0.70" />
+    <PackageReference Include="Kombit.OioIdws.WscCore" Version="4.1.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="7.0.0" />
 	<PackageReference Include="System.Xml.XmlSerializer" Version="4.3.0" />
 

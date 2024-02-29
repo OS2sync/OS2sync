@@ -145,6 +145,41 @@ namespace OS2syncAD
                 {
                     orgUnit.Post = getSingleAttribute(anEvent, AppConfiguration.OUAttributePost);
                 }
+
+                if (!string.IsNullOrEmpty(AppConfiguration.OUAttributeContactOpenHours) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributeContactOpenHours))
+                {
+                    orgUnit.ContactOpenHours = getSingleAttribute(anEvent, AppConfiguration.OUAttributeContactOpenHours);
+                }
+
+                if (!string.IsNullOrEmpty(AppConfiguration.OUAttributeContact) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributeContact))
+                {
+                    orgUnit.Contact = getSingleAttribute(anEvent, AppConfiguration.OUAttributeContact);
+                }
+
+                if (!string.IsNullOrEmpty(AppConfiguration.OUAttributeEmailRemarks) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributeEmailRemarks))
+                {
+                    orgUnit.EmailRemarks = getSingleAttribute(anEvent, AppConfiguration.OUAttributeEmailRemarks);
+                }
+
+                if (!string.IsNullOrEmpty(AppConfiguration.OUAttributePostReturn) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributePostReturn))
+                {
+                    orgUnit.PostReturn = getSingleAttribute(anEvent, AppConfiguration.OUAttributePostReturn);
+                }
+
+                if (!string.IsNullOrEmpty(AppConfiguration.OUAttributePhoneOpenHours) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributePhoneOpenHours))
+                {
+                    orgUnit.PhoneOpenHours = getSingleAttribute(anEvent, AppConfiguration.OUAttributePhoneOpenHours);
+                }
+
+                if (!string.IsNullOrEmpty(AppConfiguration.OUAttributeUrl) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributeUrl))
+                {
+                    orgUnit.Url = getSingleAttribute(anEvent, AppConfiguration.OUAttributeUrl);
+                }
+
+                if (!string.IsNullOrEmpty(AppConfiguration.OUAttributeLandline) && anEvent.ADAttributes.Contains(AppConfiguration.OUAttributeLandline))
+                {
+                    orgUnit.Landline = getSingleAttribute(anEvent, AppConfiguration.OUAttributeLandline);
+                }
             }
 
             return orgUnit;

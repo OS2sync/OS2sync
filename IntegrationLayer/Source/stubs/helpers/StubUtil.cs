@@ -92,7 +92,7 @@ namespace Organisation.IntegrationLayer
                     Password = OrganisationRegistryProperties.AppSettings.ClientSettings.WscKeystorePassword,
                 },
 
-                Cvr = OrganisationRegistryProperties.AppSettings.Cvr,
+                Cvr = OrganisationRegistryProperties.GetCurrentMunicipality(),
                 TokenLifeTimeInMinutes = 120,
                 IncludeLibertyHeader = false,
                 MaxReceivedMessageSize = Int32.MaxValue
@@ -113,6 +113,11 @@ namespace Organisation.IntegrationLayer
 
             IStsTokenService stsTokenService = new StsTokenServiceCache(stsConfiguration);
             var securityToken = (GenericXmlSecurityToken)stsTokenService.GetToken();
+
+            if (!securityToken.TokenXml.OuterXml.Contains(OrganisationRegistryProperties.GetCurrentMunicipality()))
+            {
+                throw new Exception("Token from STS does not contain CVR of municipality: " + OrganisationRegistryProperties.GetCurrentMunicipality());
+            }
 
             return CreateChannelWithIssuedToken<PortType>(securityToken, stsConfiguration, service, operation);
         }

@@ -176,57 +176,93 @@ namespace Organisation.IntegrationLayer
                 }
             }
 
+            // make a copy, needed to make sure we can remove duplicates from FK Organisation
+            var opgaverCopy = new List<string>();
+            opgaverCopy.AddRange(opgaver);
+
+            // find those to remove (those no longer present in local set)
+            var toRemove = new List<int>();
             if (registration.RelationListe?.Opgaver != null)
             {
-                IEqualityComparer<OpgaverFlerRelationType> comparer = new OpgaverFlerRelationTypeComparer();
-
-                // remove duplicates from registration.RelationListe.Opgaver (because sometimes we get duplicates back from KMD)
-                registration.RelationListe.Opgaver = registration.RelationListe.Opgaver.Distinct(comparer).ToArray();
-
-                // terminate virkning on elements no longer in local
-                foreach (var opgaveRelation in registration.RelationListe.Opgaver)
+                for (int i = registration.RelationListe.Opgaver.Length - 1; i>= 0; i--)
                 {
-                    string uuid = opgaveRelation.ReferenceID?.Item;
-
-                    if (uuid != null && !opgaver.Contains(uuid))
+                    var opgaveRelation = registration.RelationListe.Opgaver[i];
+                    
+                    string opgaveRelationUuid = opgaveRelation.ReferenceID?.Item;
+                    if (!opgaverCopy.Contains(opgaveRelationUuid))
                     {
+                        // we now remove it from opgaverCopy, so we don't match the same value again,
+                        // giving us the side-effect of removing duplicates from FK Organisation existing data
+                        opgaverCopy.Remove(opgaveRelationUuid);
+
+                        toRemove.Add(i);
                         changes = true;
-                        StubUtil.TerminateVirkning(opgaveRelation.Virkning, timestamp);
                     }
                 }
             }
 
-            // actually add the new ones to this registration
-            if (toAdd.Count > 0)
+            if (changes)
             {
-                if (registration.RelationListe.Opgaver == null || registration.RelationListe.Opgaver.Length == 0)
+                // generate new set of OpgaverFlerRelationType with correct size
+                int newSize = ((registration.RelationListe?.Opgaver != null) ? registration.RelationListe.Opgaver.Length : 0);
+                newSize += toAdd.Count;
+
+                int idx = 0;
+                OpgaverFlerRelationType[] opgaverTypes = new OpgaverFlerRelationType[newSize];
+
+                int currentMaxIdx = 1;
+                // copy existing (but set a stop-date on those flagged for removal)
+                if (registration.RelationListe?.Opgaver != null)
                 {
-                    AddOpgaver(toAdd, virkning, registration);
+                    for (int i = registration.RelationListe.Opgaver.Length - 1; i >= 0; i--)
+                    {
+                        if (toRemove.Contains(i))
+                        {
+                            StubUtil.TerminateVirkning(registration.RelationListe.Opgaver[i].Virkning, timestamp);
+                        }
+
+                        opgaverTypes[idx++] = registration.RelationListe.Opgaver[i];
+
+                        if (registration.RelationListe.Opgaver[i].Indeks != null)
+                        {
+                            int idxValue = 0;
+
+                            if (int.TryParse(registration.RelationListe.Opgaver[i].Indeks, out idxValue))
+                            {
+                                if (idxValue > currentMaxIdx)
+                                {
+                                    currentMaxIdx = idxValue;
+                                }
+                            }
+                        }
+                    }
                 }
-                else
+
+                // add new
+                for (int i = 0; i < toAdd.Count; i++)
                 {
-                    OpgaverFlerRelationType[] opgaverTypes = new OpgaverFlerRelationType[toAdd.Count + registration.RelationListe.Opgaver.Length];
+                    UnikIdType tilknytteFunktionId = StubUtil.GetReference<UnikIdType>(toAdd[i], ItemChoiceType.UUIDIdentifikator);
 
-                    // add new
-                    for (int i = 0; i < toAdd.Count; i++)
-                    {
-                        UnikIdType tilknytteFunktionId = StubUtil.GetReference<UnikIdType>(toAdd[i], ItemChoiceType.UUIDIdentifikator);
+                    OpgaverFlerRelationType opgaveType = new OpgaverFlerRelationType();
+                    opgaveType.ReferenceID = tilknytteFunktionId;
+                    opgaveType.Virkning = virkning;
 
-                        OpgaverFlerRelationType opgaveType = new OpgaverFlerRelationType();
-                        opgaveType.ReferenceID = tilknytteFunktionId;
-                        opgaveType.Virkning = virkning;
+                    opgaveType.Indeks = (currentMaxIdx++).ToString();
 
-                        opgaverTypes[i] = opgaveType;
-                    }
+                    // Ansvarlig
+                    opgaveType.Rolle = new UuidLabelInputType();
+                    opgaveType.Rolle.ItemElementName = ItemChoiceType.UUIDIdentifikator;
+                    opgaveType.Rolle.Item = "2a5f38d8-7092-4b3f-85cc-7e272c3c4bb0";
 
-                    // copy existing
-                    for (int j = 0, i = toAdd.Count; i < opgaverTypes.Length && j < registration.RelationListe.Opgaver.Length; i++, j++)
-                    {
-                        opgaverTypes[i] = registration.RelationListe.Opgaver[j];
-                    }
+                    // Klasse
+                    opgaveType.Type = new UuidLabelInputType();
+                    opgaveType.Type.ItemElementName = ItemChoiceType.UUIDIdentifikator;
+                    opgaveType.Type.Item = "9870b51e-3bc0-4f98-8827-eba991dd89a9";
 
-                    registration.RelationListe.Opgaver = opgaverTypes;
+                    opgaverTypes[idx++] = opgaveType;
                 }
+
+                registration.RelationListe.Opgaver = opgaverTypes;
             }
 
             return changes;
@@ -248,6 +284,17 @@ namespace Organisation.IntegrationLayer
                 OpgaverFlerRelationType opgaveType = new OpgaverFlerRelationType();
                 opgaveType.ReferenceID = tilknytteFunktionId;
                 opgaveType.Virkning = virkning;
+                opgaveType.Indeks = (i + 1).ToString();
+
+                // Ansvarlig
+                opgaveType.Rolle = new UuidLabelInputType();
+                opgaveType.Rolle.ItemElementName = ItemChoiceType.UUIDIdentifikator;
+                opgaveType.Rolle.Item = "2a5f38d8-7092-4b3f-85cc-7e272c3c4bb0";
+
+                // Klasse
+                opgaveType.Type = new UuidLabelInputType();
+                opgaveType.Type.ItemElementName = ItemChoiceType.UUIDIdentifikator;
+                opgaveType.Type.Item = "9870b51e-3bc0-4f98-8827-eba991dd89a9";
 
                 opgaverTypes[i] = opgaveType;
             }

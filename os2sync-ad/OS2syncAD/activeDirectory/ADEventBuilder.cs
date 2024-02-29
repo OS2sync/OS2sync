@@ -80,14 +80,32 @@ namespace OS2syncAD
 
         private static ADEvent EventOnObjectDeleted(ADAttributes attributes, bool isUser)
         {
-            if (!attributes.Contains(IS_DELETED_ATTRIBUTE))
+            bool disabled = false;
+            if (AppConfiguration.TerminateDisabledUsers && attributes.Contains("useraccountcontrol"))
             {
-                return null;
+                ADSingleValueAttribute accountControlStrValue = (ADSingleValueAttribute) attributes.GetField("useraccountcontrol");
+                int accountControlValue = 0;
+
+                if (Int32.TryParse(accountControlStrValue.Value, out accountControlValue))
+                {
+                    if ((accountControlValue & 2) == 2)
+                    {
+                        disabled = true;
+                    }
+                }
             }
 
-            ADSingleValueAttribute isDeleted = (ADSingleValueAttribute)attributes.GetField(IS_DELETED_ATTRIBUTE);
+            bool deleted = false;
+            if (attributes.Contains(IS_DELETED_ATTRIBUTE))
+            {
+                ADSingleValueAttribute isDeleted = (ADSingleValueAttribute)attributes.GetField(IS_DELETED_ATTRIBUTE);
+                if (isDeleted.Value != null && "true".Equals((string)isDeleted.Value.ToLower()))
+                {
+                    deleted = true;
+                }
+            }
 
-            if (isDeleted.Value != null && "true".Equals((string)isDeleted.Value.ToLower()))
+            if (disabled || deleted)
             {
                 if (isUser)
                 {

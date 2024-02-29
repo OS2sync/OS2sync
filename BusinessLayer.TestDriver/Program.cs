@@ -3,6 +3,11 @@ using Organisation.BusinessLayer.DTO.Registration;
 using Organisation.IntegrationLayer;
 using System.Collections.Generic;
 using System.IO;
+using Digst.OioIdws.OioWsTrustCore;
+using Digst.OioIdws.WscCore.OioWsTrust;
+using System.IdentityModel.Tokens;
+using System.Security.Cryptography.X509Certificates;
+using System.Linq;
 
 namespace Organisation.BusinessLayer.TestDriver
 {
@@ -16,12 +21,12 @@ namespace Organisation.BusinessLayer.TestDriver
         private static void InitEnvironment()
         {
             System.Environment.SetEnvironmentVariable("ClientSettings__WscKeystoreLocation", "c:/certifikater/keystore.pfx");
-            System.Environment.SetEnvironmentVariable("ClientSettings__WscKeystorePassword", "xxxxxxx");
-            System.Environment.SetEnvironmentVariable("LogSettings__LogRequestResponse", "true");
+            System.Environment.SetEnvironmentVariable("ClientSettings__WscKeystorePassword", "xxxx");
             System.Environment.SetEnvironmentVariable("StsSettings__StsCertificateLocation", Path.Combine(Directory.GetCurrentDirectory(), "../../../../Resources/cert/test-sts.cer"));
             System.Environment.SetEnvironmentVariable("ServiceSettings__WspCertificateLocation", Path.Combine(Directory.GetCurrentDirectory(), "../../../../Resources/cert/test-sf1500.cer"));
             System.Environment.SetEnvironmentVariable("Environment", "TEST");
-            System.Environment.SetEnvironmentVariable("Cvr", "29189978");
+            System.Environment.SetEnvironmentVariable("LogSettings__LogRequestResponse", "true");
+            System.Environment.SetEnvironmentVariable("Cvr", "12345678");
             System.Environment.SetEnvironmentVariable("TrustAllCertificates", "true");
 
             Initializer.Init();
@@ -29,13 +34,15 @@ namespace Organisation.BusinessLayer.TestDriver
             // hack to ensure random org-uuid to avoid data conflicts
             OrganisationRegistryProperties.MunicipalityOrganisationUUID.Remove(System.Environment.GetEnvironmentVariable("Cvr"));
             OrganisationRegistryProperties.MunicipalityOrganisationUUID.Add(System.Environment.GetEnvironmentVariable("Cvr"), Guid.NewGuid().ToString().ToLower());
-        }
+        }        
 
         static void Main(string[] args)
         {
             InitEnvironment();
 
-            /* ordinary tests */
+            /* ordinary tests
+            TestTokens();
+            TestIgnoreAddress();
             TestCreateAndUpdateFullUser();
             TestItSystems();
             TestListAndReadOUs();
@@ -49,8 +56,161 @@ namespace Organisation.BusinessLayer.TestDriver
             TestPositions();
             TestUpdateAndSearch();
             TestMultipleAddresses();
-
+            */
             System.Environment.Exit(0);
+        }
+
+        private static void TestIgnoreAddress()
+        {
+            OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Clear();
+            OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Add("SOR");
+            OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Add("EMAIL");
+
+            var reg = OUReg();
+            reg.SOR = "SOR-1234";
+            reg.Email = "Email-1234";
+            reg.Landline = "Landline-1234";
+            orgUnitService.Update(reg);
+
+            var ou = orgUnitService.Read(reg.Uuid);
+
+            reg.SOR = "SOR-4321";
+            reg.Email = "Email-4321";
+            reg.Landline = "Landline-4321";
+            orgUnitService.Update(reg);
+
+            var ou2 = orgUnitService.Read(reg.Uuid);
+
+            if (ou2.SOR.Equals(reg.SOR))
+            {
+                throw new Exception("SOR was updatd, even though it was ignored");
+            }
+
+            if (ou2.Email.Equals(reg.Email))
+            {
+                throw new Exception("Email was updated, even though it was ignored");
+            }
+
+            if (!ou2.Landline.Equals(reg.Landline))
+            {
+                throw new Exception("Landline was NOT updated, but it was not ignored, so what gives?");
+            }
+
+            // reset for other tests
+            OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Clear();
+            OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Add("SOR");
+        }
+
+        private static void TestTokens()
+        {
+            OioIdwsWcfConfigurationSection wscConfiguration1 = new OioIdwsWcfConfigurationSection
+            {
+
+                StsEndpointAddress = OrganisationRegistryProperties.AppSettings.StsSettings.StsEndpointAddress,
+                StsEntityIdentifier = OrganisationRegistryProperties.AppSettings.StsSettings.StsEntityIdentifier,
+
+                StsCertificate = new Certificate
+                {
+                    FromFileSystem = true,
+                    FilePath = OrganisationRegistryProperties.AppSettings.StsSettings.StsCertificateLocation
+                },
+
+                WspEndpoint = OrganisationRegistryProperties.AppSettings.ServiceSettings.WspEndpointBaseUrl + "adresse/6/",
+                WspEndpointID = OrganisationRegistryProperties.AppSettings.ServiceSettings.WspEndpointID,
+                WspSoapVersion = "1.2",
+
+                ServiceCertificate = new Certificate
+                {
+                    FromFileSystem = true,
+                    FilePath = OrganisationRegistryProperties.AppSettings.ServiceSettings.WspCertificateLocation
+                },
+
+                ClientCertificate = new Certificate
+                {
+                    FromFileSystem = true,
+                    FilePath = OrganisationRegistryProperties.AppSettings.ClientSettings.WscKeystoreLocation,
+                    Password = OrganisationRegistryProperties.AppSettings.ClientSettings.WscKeystorePassword,
+                },
+
+                Cvr = "29189633",
+                TokenLifeTimeInMinutes = 120,
+                IncludeLibertyHeader = false,
+                MaxReceivedMessageSize = Int32.MaxValue
+            };
+
+            OioIdwsWcfConfigurationSection wscConfiguration2 = new OioIdwsWcfConfigurationSection
+            {
+
+                StsEndpointAddress = OrganisationRegistryProperties.AppSettings.StsSettings.StsEndpointAddress,
+                StsEntityIdentifier = OrganisationRegistryProperties.AppSettings.StsSettings.StsEntityIdentifier,
+
+                StsCertificate = new Certificate
+                {
+                    FromFileSystem = true,
+                    FilePath = OrganisationRegistryProperties.AppSettings.StsSettings.StsCertificateLocation
+                },
+
+                WspEndpoint = OrganisationRegistryProperties.AppSettings.ServiceSettings.WspEndpointBaseUrl + "adresse/6/",
+                WspEndpointID = OrganisationRegistryProperties.AppSettings.ServiceSettings.WspEndpointID,
+                WspSoapVersion = "1.2",
+
+                ServiceCertificate = new Certificate
+                {
+                    FromFileSystem = true,
+                    FilePath = OrganisationRegistryProperties.AppSettings.ServiceSettings.WspCertificateLocation
+                },
+
+                ClientCertificate = new Certificate
+                {
+                    FromFileSystem = true,
+                    FilePath = OrganisationRegistryProperties.AppSettings.ClientSettings.WscKeystoreLocation,
+                    Password = OrganisationRegistryProperties.AppSettings.ClientSettings.WscKeystorePassword,
+                },
+
+                Cvr = "29189978",
+                TokenLifeTimeInMinutes = 120,
+                IncludeLibertyHeader = false,
+                MaxReceivedMessageSize = Int32.MaxValue
+            };
+
+            StsTokenServiceConfiguration stsConfiguration1 = TokenServiceConfigurationFactory.CreateConfiguration(wscConfiguration1);
+            StsTokenServiceConfiguration stsConfiguration2 = TokenServiceConfigurationFactory.CreateConfiguration(wscConfiguration2);
+
+            if (OrganisationRegistryProperties.AppSettings.TrustAllCertificates)
+            {
+                stsConfiguration1.SslCertificateAuthentication.RevocationMode = X509RevocationMode.NoCheck;
+                stsConfiguration1.StsCertificateAuthentication.RevocationMode = X509RevocationMode.NoCheck;
+                stsConfiguration1.WspCertificateAuthentication.RevocationMode = X509RevocationMode.NoCheck;
+
+                stsConfiguration1.SslCertificateAuthentication.CertificateValidationMode = System.ServiceModel.Security.X509CertificateValidationMode.None;
+                stsConfiguration1.StsCertificateAuthentication.CertificateValidationMode = System.ServiceModel.Security.X509CertificateValidationMode.None;
+                stsConfiguration1.WspCertificateAuthentication.CertificateValidationMode = System.ServiceModel.Security.X509CertificateValidationMode.None;
+
+                stsConfiguration2.SslCertificateAuthentication.RevocationMode = X509RevocationMode.NoCheck;
+                stsConfiguration2.StsCertificateAuthentication.RevocationMode = X509RevocationMode.NoCheck;
+                stsConfiguration2.WspCertificateAuthentication.RevocationMode = X509RevocationMode.NoCheck;
+
+                stsConfiguration2.SslCertificateAuthentication.CertificateValidationMode = System.ServiceModel.Security.X509CertificateValidationMode.None;
+                stsConfiguration2.StsCertificateAuthentication.CertificateValidationMode = System.ServiceModel.Security.X509CertificateValidationMode.None;
+                stsConfiguration2.WspCertificateAuthentication.CertificateValidationMode = System.ServiceModel.Security.X509CertificateValidationMode.None;
+
+            }
+
+            IStsTokenService stsTokenService1 = new StsTokenServiceCache(stsConfiguration1);
+            var securityToken1 = (GenericXmlSecurityToken)stsTokenService1.GetToken();
+
+            if (!securityToken1.TokenXml.OuterXml.Contains("29189633"))
+            {
+                throw new Exception("Token from STS does not contain CVR of municipality: 29189633");
+            }
+
+            IStsTokenService stsTokenService2 = new StsTokenServiceCache(stsConfiguration2);
+            var securityToken2 = (GenericXmlSecurityToken)stsTokenService2.GetToken();
+
+            if (!securityToken2.TokenXml.OuterXml.Contains("29189978"))
+            {
+                throw new Exception("Token from STS does not contain CVR of municipality: 29189978");
+            }
         }
 
         private static void TestItSystems()

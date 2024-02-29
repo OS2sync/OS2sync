@@ -30,7 +30,7 @@ namespace Organisation.ServiceLayer
 
             sched.ScheduleJob(serviceLauncherJob, serviceLauncherTrigger);
 
-            if (!string.IsNullOrEmpty(OrganisationRegistryProperties.AppSettings.SchedulerSettings.DBConnectionString))
+            if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.Enabled)
             {
                 // CleanupDatabaseJob
                 IJobDetail cleanupDatabaseJob = JobBuilder.Create<CleanupDatabaseJob>()
@@ -72,7 +72,6 @@ namespace Organisation.ServiceLayer
                 .Build();
 
             sched.ScheduleJob(cleanupJob, cleanupTrigger);
-
 
             return true;
         }

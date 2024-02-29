@@ -88,6 +88,14 @@ namespace Organisation.SchedulingLayer
             }
         }
 
+        public static string LowerPriority
+        {
+            get
+            {
+                return LOWER_PRIORITY;
+            }
+        }
+
         public static string Failure
         {
             get
@@ -174,7 +182,9 @@ namespace Organisation.SchedulingLayer
         {
             get
             {
-                return @"SELECT * FROM queue_users ORDER BY priority, id LIMIT " + rows;
+                // return @"SELECT * FROM queue_users ORDER BY priority, id LIMIT " + rows;
+                // TODO: currently ignoring any user with a priority of 15+. so we can park the bad KMD calls
+                return @"SELECT * FROM queue_users WHERE priority < 15 ORDER BY priority, id LIMIT " + rows;
             }
         }
 
@@ -186,7 +196,7 @@ namespace Organisation.SchedulingLayer
             }
         }
 
-        private const string SELECT_SUCCESS = @"SELECT * FROM success_users WHERE uuid = @uuid";
+        private const string SELECT_SUCCESS = @"SELECT * FROM success_users WHERE uuid = @uuid ORDER BY id DESC LIMIT 1";
 
         private const string SELECT_POSITIONS = @"SELECT name, orgunit_uuid, start_date, stop_date FROM queue_user_positions WHERE user_id = @id";
 
@@ -209,5 +219,7 @@ namespace Organisation.SchedulingLayer
         private const string CLEANUP_MSSQL = @"
             DELETE FROM success_users WHERE timestamp <= GETDATE() - 7;
         ";
+
+        private const string LOWER_PRIORITY = @"UPDATE queue_users SET priority = 15 WHERE id = @id";
     }
 }

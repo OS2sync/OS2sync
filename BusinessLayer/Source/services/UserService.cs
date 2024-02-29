@@ -108,7 +108,6 @@ namespace Organisation.BusinessLayer
             }
         }
 
-        // don't use this for anything besides tests
         public List<string> List()
         {
             log.Debug("Performing List on Users");

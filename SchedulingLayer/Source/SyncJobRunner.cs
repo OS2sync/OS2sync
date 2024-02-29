@@ -11,7 +11,7 @@ namespace Organisation.SchedulingLayer
 
         public static async void InitAsync()
         {
-            if (string.IsNullOrEmpty(OrganisationRegistryProperties.AppSettings.SchedulerSettings.DBConnectionString))
+            if (!OrganisationRegistryProperties.AppSettings.SchedulerSettings.Enabled)
             {
                 log.Warn("Not starting scheduler - no connection string configured!");
                 return;
