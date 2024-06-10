@@ -132,11 +132,16 @@ namespace Organisation.BusinessLayer
                 registration.Uuid = uuid;
                 registration.UserId = user.UserId;
                 registration.ShortKey = user.ShortKey;
-                registration.Person = new Person()
+
+                if (user.Person != null)
                 {
-                    Cpr = user.Person.Cpr,
-                    Name = user.Person.Name
-                };
+                    registration.Person = new Person()
+                    {
+                        Cpr = user.Person.Cpr,
+                        Name = user.Person.Name
+                    };
+                }
+
                 registration.Status = user.Status;
 
                 foreach (var position in user.Positions)

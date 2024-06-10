@@ -10,6 +10,9 @@ using Digst.OioIdws.SoapCore;
 using Digst.OioIdws.SoapCore.Tokens;
 using Digst.OioIdws.SoapCore.Bindings;
 using Digst.OioIdws.CommonCore;
+using System.IO;
+using System.Net;
+using IntegrationLayer.Adresse;
 
 namespace Organisation.IntegrationLayer
 {
@@ -99,6 +102,7 @@ namespace Organisation.IntegrationLayer
             };
 
             StsTokenServiceConfiguration stsConfiguration = TokenServiceConfigurationFactory.CreateConfiguration(wscConfiguration);
+            stsConfiguration.SendTimeout = new TimeSpan(0, 5, 0);
 
             if (OrganisationRegistryProperties.AppSettings.TrustAllCertificates)
             {
@@ -120,6 +124,34 @@ namespace Organisation.IntegrationLayer
             }
 
             return CreateChannelWithIssuedToken<PortType>(securityToken, stsConfiguration, service, operation);
+        }
+
+        public static Exception CheckForTemporaryError(Exception ex, string operation, string service)
+        {
+            if (ex is AggregateException)
+            {
+                bool temporaryFailure = false;
+
+                var exceptions = ((AggregateException)ex).InnerExceptions;
+                if (exceptions != null)
+                {
+                    foreach (var exception in exceptions)
+                    {
+                        if (exception is CommunicationException || exception is IOException || exception is TimeoutException || exception is WebException)
+                        {
+                            temporaryFailure = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!temporaryFailure)
+                {
+                    throw ex;
+                }
+            }
+
+            return new ServiceNotFoundException("Failed to establish connection to the " + operation + " operation on the " + service + " service", ex);
         }
 
         /// <summary>
@@ -149,10 +181,15 @@ namespace Organisation.IntegrationLayer
             {
                 MessageSecurityVersion = MessageSecurityVersion.WSSecurity11WSTrust13WSSecureConversation13WSSecurityPolicy12BasicSecurityProfile10,
                 MaxReceivedMessageSize = stsConfiguration.MaxReceivedMessageSize,
-                IncludeLibertyHeader = stsConfiguration.IncludeLibertyHeader,
+                IncludeLibertyHeader = stsConfiguration.IncludeLibertyHeader
             };
 
             var bindingToCallService = new OioIdwsSoapBinding(tokenParameters);
+            bindingToCallService.SendTimeout = new TimeSpan(0, 3, 0);
+            bindingToCallService.OpenTimeout = new TimeSpan(0, 3, 0);
+            bindingToCallService.CloseTimeout = new TimeSpan(0, 3, 0);
+            bindingToCallService.ReceiveTimeout = new TimeSpan(0, 3, 0);
+
             FederatedChannelFactory<T> factory = CreateFactory<T>(stsConfiguration, serverCertificate, bindingToCallService);
 
             if (OrganisationRegistryProperties.AppSettings.LogSettings.LogRequestResponse)

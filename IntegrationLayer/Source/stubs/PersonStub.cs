@@ -53,9 +53,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Import successful on Person with uuid " + person.Uuid);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Importer service on Person", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Importer", "Person");
             }
         }
 
@@ -135,9 +135,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Ret successful on Person with uuid " + uuid);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Ret service on Person", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Ret", "Person");
             }
         }
 
@@ -200,9 +200,9 @@ namespace Organisation.IntegrationLayer
 
                 return result;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Laes service on Person", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Laes", "Person");
             }
         }
 
@@ -278,9 +278,9 @@ namespace Organisation.IntegrationLayer
 
                 return result;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the List service on Person", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "List", "Person");
             }
         }
 

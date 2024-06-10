@@ -60,9 +60,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Import successful on Address with uuid " + address.Uuid);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Importer service on Adresse", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Importer", "Adresse");
             }
         }
 
@@ -125,9 +125,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Ret successful on Address with uuid " + uuid);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Ret service on Adresse", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Ret", "Adresse");
             }
         }
 
@@ -164,9 +164,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Slet successful on Address with uuid " + uuid);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Slet service on Adresse", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Delete", "Adresse");
             }
         }
 
@@ -229,9 +229,9 @@ namespace Organisation.IntegrationLayer
 
                 return result;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Laes service on Adresse", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Laes", "Adresse");
             }
         }
 
@@ -307,9 +307,9 @@ namespace Organisation.IntegrationLayer
 
                 return result;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the List service on Adresse", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "List", "Adresse");
             }
         }
 

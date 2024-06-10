@@ -422,12 +422,25 @@ namespace Organisation.BusinessLayer
                 });
             }
 
-            ServiceHelper.UpdateAddress(registration.Location, orgLocationUuid, registration.Timestamp, out uuid);
-            if (uuid != null)
+            // only update if not ignored, otherwise keep reference if exists, else do nothing
+            if (!OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Contains("LOCATION"))
             {
+                ServiceHelper.UpdateAddress(registration.Location, orgLocationUuid, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.LOCATION
+                    });
+                }
+            }
+            else if (orgLocationUuid != null)
+            {
+                // just keep the old reference if one is available
                 addressRefs.Add(new AddressRelation()
                 {
-                    Uuid = uuid,
+                    Uuid = orgLocationUuid,
                     Type = AddressRelationType.LOCATION
                 });
             }
@@ -547,12 +560,25 @@ namespace Organisation.BusinessLayer
                 });
             }
 
-            ServiceHelper.UpdateAddress(registration.Contact, orgContactUuid, registration.Timestamp, out uuid);
-            if (uuid != null)
+            // only update if not ignored, otherwise keep reference if exists, else do nothing
+            if (!OrganisationRegistryProperties.AppSettings.SchedulerSettings.IgnoredOUAddressTypes.Contains("CONTACT"))
             {
+                ServiceHelper.UpdateAddress(registration.Contact, orgContactUuid, registration.Timestamp, out uuid);
+                if (uuid != null)
+                {
+                    addressRefs.Add(new AddressRelation()
+                    {
+                        Uuid = uuid,
+                        Type = AddressRelationType.CONTACT_ADDRESS
+                    });
+                }
+            }
+            else if (orgContactUuid != null)
+            {
+                // just keep the old reference if one is available
                 addressRefs.Add(new AddressRelation()
                 {
-                    Uuid = uuid,
+                    Uuid = orgContactUuid,
                     Type = AddressRelationType.CONTACT_ADDRESS
                 });
             }

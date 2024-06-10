@@ -75,9 +75,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Importer successful on OrganisationEnhed with uuid " + unit.Uuid);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Importer service on OrganisationEnhed", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Importer", "OrganisationEnhed");
             }
         }
 
@@ -556,9 +556,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Ret succesful on OrganisationEnhed with uuid " + unit.Uuid);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Ret service on OrganisationEnhed", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Ret", "OrganisationEnhed");
             }
         }
 
@@ -621,9 +621,9 @@ namespace Organisation.IntegrationLayer
 
                 return result;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Laes service on OrganisationEnhed", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Laes", "OrganisationEnhed");
             }
         }
 
@@ -652,6 +652,12 @@ namespace Organisation.IntegrationLayer
                 if (input.RelationListe.Overordnet != null)
                 {
                     StubUtil.TerminateVirkning(input.RelationListe.Overordnet.Virkning, timestamp);
+                }
+
+                // cut relationship to Tilhoerer
+                if (input.RelationListe?.Tilhoerer != null)
+                {
+                    StubUtil.TerminateVirkning(input.RelationListe.Tilhoerer.Virkning, timestamp);
                 }
 
                 // cut relationship to all functions (payout unit references and contact places)
@@ -705,9 +711,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Deactivate successful on OrganisationEnhed with uuid " + uuid);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Ret service on OrganisationEnhed", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Ret", "OrganisationEnhed");
             }
         }
 
@@ -761,9 +767,9 @@ namespace Organisation.IntegrationLayer
 
                 return functions;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Soeg service on OrganisationEnhed", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Soeg", "OrganisationEnhed");
             }
         }
 

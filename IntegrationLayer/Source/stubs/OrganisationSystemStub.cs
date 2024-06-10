@@ -93,9 +93,9 @@ namespace Organisation.IntegrationLayer
 
                 return registrations;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the fremsoegobjekthierarki service on OrganisationSystem", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Soeg", "OrganisationSystem");
             }
         }
     }

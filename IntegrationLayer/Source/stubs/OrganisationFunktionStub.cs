@@ -1,9 +1,12 @@
 ﻿using IntegrationLayer.OrganisationFunktion;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.SymbolStore;
 using System.IO;
 using System.Net;
+using System.Security.Cryptography;
 using System.ServiceModel;
+using System.Text;
 
 namespace Organisation.IntegrationLayer
 {
@@ -73,9 +76,44 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Import successful on OrgFunction with uuid " + orgFunction.Uuid);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Importer service on OrganisationFunktion", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Importer", "OrganisationFunktion");
+            }
+        }
+
+        public void RetRaw(string uuid, RegistreringType1 registration)
+        {
+            log.Debug("Attempting Raw Ret on OrganisationFunction with uuid " + uuid);
+
+            try
+            {
+                OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Ret");
+
+                RetInputType1 input = new RetInputType1();
+                input.UUIDIdentifikator = uuid;
+                input.AttributListe = registration.AttributListe;
+                input.TilstandListe = registration.TilstandListe;
+                input.RelationListe = registration.RelationListe;
+
+                retRequest request = new retRequest();
+                request.RetInput = input;
+
+                retResponse response = channel.retAsync(request).Result;
+
+                int statusCode = Int32.Parse(response.RetOutput.StandardRetur.StatusKode);
+                if (statusCode != 20)
+                {
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", OrganisationFunktionStubHelper.SERVICE, response.RetOutput.StandardRetur.FejlbeskedTekst);
+                    log.Error(message);
+                    throw new SoapServiceException(message);
+                }
+
+                log.Debug("Ret succesful on OrganisationFunktion with uuid " + uuid);
+            }
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
+            {
+                throw StubUtil.CheckForTemporaryError(ex, "Ret", "OrganisationFunktion");
             }
         }
 
@@ -437,9 +475,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Ret succesful on OrganisationFunktion with uuid " + orgFunction.Uuid);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Ret service on OrganisationFunktion", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Ret", "OrganisationFunktion");
             }
         }
 
@@ -837,13 +875,13 @@ namespace Organisation.IntegrationLayer
 
                 return functions;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Soeg service on OrganisationFunktion", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Soeg", "OrganisationFunktion");
             }
         }
 
-        public void Deactivate(string uuid, DateTime timestamp, bool futurePositions = false)
+        public void Deactivate(string uuid, DateTime timestamp, bool futurePositions = false, bool onlyDisable = false)
         {
             log.Debug("Attempting Deactivate on OrganisationFunktion with uuid " + uuid);
 
@@ -873,30 +911,33 @@ namespace Organisation.IntegrationLayer
                     ShortKey = latestProperty?.BrugervendtNoegleTekst
                 });
 
-                // cut relationship to all users
-                if (input.RelationListe.TilknyttedeBrugere != null && input.RelationListe.TilknyttedeBrugere.Length > 0)
+                if (!onlyDisable)
                 {
-                    foreach (var bruger in input.RelationListe.TilknyttedeBrugere)
+                    // cut relationship to all users
+                    if (input.RelationListe.TilknyttedeBrugere != null && input.RelationListe.TilknyttedeBrugere.Length > 0)
                     {
-                        StubUtil.TerminateVirkning(bruger.Virkning, timestamp, futurePositions);
+                        foreach (var bruger in input.RelationListe.TilknyttedeBrugere)
+                        {
+                            StubUtil.TerminateVirkning(bruger.Virkning, timestamp, futurePositions);
+                        }
                     }
-                }
 
-                // cut relationship to all orgUnits
-                if (input.RelationListe.TilknyttedeEnheder != null && input.RelationListe.TilknyttedeEnheder.Length > 0)
-                {
-                    foreach (var enhed in input.RelationListe.TilknyttedeEnheder)
+                    // cut relationship to all orgUnits
+                    if (input.RelationListe.TilknyttedeEnheder != null && input.RelationListe.TilknyttedeEnheder.Length > 0)
                     {
-                        StubUtil.TerminateVirkning(enhed.Virkning, timestamp, futurePositions);
+                        foreach (var enhed in input.RelationListe.TilknyttedeEnheder)
+                        {
+                            StubUtil.TerminateVirkning(enhed.Virkning, timestamp, futurePositions);
+                        }
                     }
-                }
 
-                // cut relationship to all Opgaver
-                if (input.RelationListe.TilknyttedeOpgaver != null && input.RelationListe.TilknyttedeOpgaver.Length > 0)
-                {
-                    foreach (var opgave in input.RelationListe.TilknyttedeOpgaver)
+                    // cut relationship to all Opgaver
+                    if (input.RelationListe.TilknyttedeOpgaver != null && input.RelationListe.TilknyttedeOpgaver.Length > 0)
                     {
-                        StubUtil.TerminateVirkning(opgave.Virkning, timestamp);
+                        foreach (var opgave in input.RelationListe.TilknyttedeOpgaver)
+                        {
+                            StubUtil.TerminateVirkning(opgave.Virkning, timestamp);
+                        }
                     }
                 }
 
@@ -919,9 +960,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Deactivate on OrganisationFunktion with uuid " + uuid + " succeded");
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Ret service on OrganisationFunktion", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Ret", "OrganisationFunktion");
             }
         }
 
@@ -1017,9 +1058,9 @@ namespace Organisation.IntegrationLayer
 
                 return response.ListOutput.FiltreretOejebliksbillede;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Laes service on OrganisationFunktion", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Laes", "OrganisationFunktion");
             }
         }
 

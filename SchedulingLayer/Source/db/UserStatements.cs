@@ -52,7 +52,15 @@ namespace Organisation.SchedulingLayer
         {
             get
             {
-                return SELECT_SUCCESS;
+                switch (database)
+                {
+                    case DatabaseType.MSSQL:
+                        return SELECT_SUCCESS_MSSQL;
+                    case DatabaseType.MYSQL:
+                        return SELECT_SUCCESS_MYSQL;
+                    default:
+                        throw new System.Exception("Unknown database type: " + database);
+                }
             }
         }
 
@@ -182,9 +190,7 @@ namespace Organisation.SchedulingLayer
         {
             get
             {
-                // return @"SELECT * FROM queue_users ORDER BY priority, id LIMIT " + rows;
-                // TODO: currently ignoring any user with a priority of 15+. so we can park the bad KMD calls
-                return @"SELECT * FROM queue_users WHERE priority < 15 ORDER BY priority, id LIMIT " + rows;
+                return @"SELECT * FROM queue_users ORDER BY priority, id LIMIT " + rows;
             }
         }
 
@@ -196,7 +202,8 @@ namespace Organisation.SchedulingLayer
             }
         }
 
-        private const string SELECT_SUCCESS = @"SELECT * FROM success_users WHERE uuid = @uuid ORDER BY id DESC LIMIT 1";
+        private const string SELECT_SUCCESS_MYSQL = @"SELECT * FROM success_users WHERE uuid = @uuid ORDER BY id DESC LIMIT 1";
+        private const string SELECT_SUCCESS_MSSQL = @"SELECT TOP(1) * FROM success_users WHERE uuid = @uuid ORDER BY id DESC";
 
         private const string SELECT_POSITIONS = @"SELECT name, orgunit_uuid, start_date, stop_date FROM queue_user_positions WHERE user_id = @id";
 
@@ -220,6 +227,6 @@ namespace Organisation.SchedulingLayer
             DELETE FROM success_users WHERE timestamp <= GETDATE() - 7;
         ";
 
-        private const string LOWER_PRIORITY = @"UPDATE queue_users SET priority = 15 WHERE id = @id";
+        private const string LOWER_PRIORITY = @"UPDATE queue_users SET priority = 20 WHERE id = @id";
     }
 }

@@ -27,6 +27,8 @@ namespace Organisation.ServiceLayer
         {
             if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
             {
+                log.Warn("Rejected access to User Update operation");
+
                 return Unauthorized();
             }
 
@@ -57,6 +59,8 @@ namespace Organisation.ServiceLayer
         {
             if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
             {
+                log.Warn("Rejected access to User Delete operation");
+
                 return Unauthorized();
             }
 
@@ -84,6 +88,8 @@ namespace Organisation.ServiceLayer
         {
             if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
             {
+                log.Warn("Rejected access to User Cleanup operation");
+
                 return Unauthorized();
             }
 
@@ -153,6 +159,8 @@ namespace Organisation.ServiceLayer
         {
             if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
             {
+                log.Warn("Rejected access to User CleanAll operation");
+
                 return Unauthorized();
             }
 
@@ -175,6 +183,8 @@ namespace Organisation.ServiceLayer
         {
             if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
             {
+                log.Warn("Rejected access to User Read operation for " + uuid);
+
                 return Unauthorized();
             }
 

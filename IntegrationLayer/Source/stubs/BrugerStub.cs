@@ -69,9 +69,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Import on Bruger with uuid " + user.Uuid + " succeeded");
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Importer service on Bruger", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Importer", "Bruger");
             }
         }
 
@@ -100,6 +100,19 @@ namespace Organisation.IntegrationLayer
                 VirkningType virkning = helper.GetVirkning(timestamp);
                 helper.SetTilstandToInactive(virkning, registration, timestamp);
 
+                if (registration.RelationListe?.TilknyttedePersoner != null)
+                {
+                    foreach (var personRelation in registration.RelationListe.TilknyttedePersoner)
+                    {
+                        StubUtil.TerminateVirkning(personRelation.Virkning, timestamp);
+                    }
+                }
+
+                if (registration.RelationListe?.Tilhoerer != null)
+                {
+                    StubUtil.TerminateVirkning(registration.RelationListe.Tilhoerer.Virkning, timestamp);
+                }
+
                 // we cannot fix the actual data issue in FK Organisation, but we can remove them from
                 // the payload, so the validator does not reject our update *sigh*
                 removeDuplicateAddresses(registration);
@@ -125,9 +138,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Deactivate on Bruger with uuid " +  uuid + " succeeded");
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Ret service on Bruger", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Deactivate", "Bruger");
             }
         }
 
@@ -464,14 +477,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Ret succesful on Bruger with uuid " + user.Uuid);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                // temporary fix until we figure out why this happens
-                if (ex.Message.Contains("Fault occurred while processing")) {
-                    throw;
-                }
-                
-                throw new ServiceNotFoundException("Failed to establish connection to the Ret service on Bruger", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Ret", "Bruger");
             }
         }
 
@@ -547,9 +555,9 @@ namespace Organisation.IntegrationLayer
 
                 return result;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the List service on Bruger", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "List", "Bruger");
             }
         }
 
@@ -601,9 +609,9 @@ namespace Organisation.IntegrationLayer
 
                 return functions;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Soeg service on Bruger", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Soeg", "Bruger");
             }
         }
 
@@ -694,9 +702,9 @@ namespace Organisation.IntegrationLayer
 
                 return result;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Laes service on Bruger", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Laes", "Bruger");
             }
         }
 

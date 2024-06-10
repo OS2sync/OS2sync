@@ -10,7 +10,7 @@ using Organisation.BusinessLayer.DTO.Read;
 namespace Organisation.ServiceLayer
 {
     [Route("api/[controller]")]
-    public class HierarchyController : Controller
+    public class HierarchyController : BaseController
     {
         private static log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private InspectorService service = new InspectorService();
@@ -39,6 +39,12 @@ namespace Organisation.ServiceLayer
         [HttpGet]
         public IActionResult Read([FromHeader] string cvr, [FromHeader] string apiKey, [FromHeader] string onlyOUs)
         {
+            if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
+            {
+                log.Warn("Rejected access to HierarchyController Read operation");
+                return Unauthorized();
+            }
+
             string uuid = Guid.NewGuid().ToString().ToLower();
 
             new Thread(() => {
@@ -146,7 +152,7 @@ namespace Organisation.ServiceLayer
         }
 
         [HttpGet("{uuid}")]
-        public IActionResult ReadResult(string uuid, [FromHeader] string apiKey)
+        public IActionResult ReadResult(string uuid, [FromHeader] string cvr, [FromHeader] string apiKey)
         {
             try
             {

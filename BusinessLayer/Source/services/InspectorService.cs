@@ -1006,7 +1006,7 @@ namespace Organisation.BusinessLayer
             }
             else
             {
-                int amount = 500, offset = 0;
+                int amount = OrganisationRegistryProperties.AppSettings.ReadSettings.HierarchyGrouping, offset = 0;
 
                 var res = brugerStub.Soeg(offset, amount);
                 while (res.Count > 0)
@@ -1024,7 +1024,7 @@ namespace Organisation.BusinessLayer
         public List<string> FindAllOUs()
         {
             List<string> result = new List<string>();
-            int amount = 500, offset = 0;
+            int amount = OrganisationRegistryProperties.AppSettings.ReadSettings.HierarchyGrouping, offset = 0;
 
             var res = organisationEnhedStub.Soeg(offset, amount);
             while (res.Count > 0)
@@ -1042,7 +1042,7 @@ namespace Organisation.BusinessLayer
         {
             List<User> result = new List<User>();
 
-            // put into sets of 50 uuids a pop - so we can bulk operate on them
+            // put into sets of X uuids a pop - so we can bulk operate on them
             var usersInBulk = new List<List<string>>();
             var currentList = new List<string>();
             usersInBulk.Add(currentList);
@@ -1050,13 +1050,15 @@ namespace Organisation.BusinessLayer
             int counter = 0;
             int total = 0;
 
+            int userGroupingSize = OrganisationRegistryProperties.AppSettings.ReadSettings.UserGrouping;
+
             foreach (string uuid in users)
             {
                 currentList.Add(uuid);
                 counter++;
                 total++;
 
-                if (counter >= 50)
+                if (counter >= userGroupingSize)
                 {
                     currentList = new List<string>();
                     usersInBulk.Add(currentList);
@@ -1135,19 +1137,23 @@ namespace Organisation.BusinessLayer
 
             log.Info("Reading hiearchy: start");
 
+            int hierarchySize = OrganisationRegistryProperties.AppSettings.ReadSettings.HierarchyGrouping;
+            int orgUnitSize = OrganisationRegistryProperties.AppSettings.ReadSettings.OrgUnitGrouping;
+
             var registrations = new List<OrgUnitRegWrapper>();
             int offset = 0, hardstop = 0;
             while (true)
             {
-                if (hardstop++ >= 20)
+                // there should never be 10.000 orgUnits... that is just plain wrong
+                if (hardstop++ >= (10000 / hierarchySize))
                 {
-                    log.Warn("Did 20 pages on object hierarchy, without seeing the end - aborting!");
+                    log.Warn("Did " + (10000 / hierarchySize) + " pages on object hierarchy, without seeing the end - aborting!");
                     break;
                 }
 
                 bool moreData = false;
-                var res = organisationSystemStub.Read("500", "" + offset, out moreData);
-                offset += 500;
+                var res = organisationSystemStub.Read("" + hierarchySize, "" + offset, out moreData);
+                offset += hierarchySize;
 
                 if (!moreData)
                 {
@@ -1162,7 +1168,7 @@ namespace Organisation.BusinessLayer
             // temporary, as out variables are not allowed in parallel below
             var someUnitRoles = new List<FiltreretOejebliksbilledeType>();
 
-            // put ous into sets of 7 - so we can bulk operate on them
+            // put ous into sets of (X) - so we can bulk operate on them
             var ousInBulk = new List<List<OrgUnitRegWrapper>>();
             var currentList = new List<OrgUnitRegWrapper>();
             ousInBulk.Add(currentList);
@@ -1176,7 +1182,7 @@ namespace Organisation.BusinessLayer
                 counter++;
                 total++;
 
-                if (counter >= 7)
+                if (counter >= orgUnitSize)
                 {
                     currentList = new List<OrgUnitRegWrapper>();
                     ousInBulk.Add(currentList);

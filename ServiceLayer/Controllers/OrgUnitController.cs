@@ -27,6 +27,7 @@ namespace Organisation.ServiceLayer
         {
             if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
             {
+                log.Warn("Rejected access to OrgUnit Update operation");
                 return Unauthorized();
             }
 
@@ -62,6 +63,8 @@ namespace Organisation.ServiceLayer
         {
             if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
             {
+                log.Warn("Rejected access to OrgUnit Delete operation");
+
                 return Unauthorized();
             }
 
@@ -89,6 +92,8 @@ namespace Organisation.ServiceLayer
         {
             if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
             {
+                log.Warn("Rejected access to OrgUnit Cleanup operation");
+
                 return Unauthorized();
             }
 
@@ -158,6 +163,8 @@ namespace Organisation.ServiceLayer
         {
             if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
             {
+                log.Warn("Rejected access to OrgUnit ReadAll operation");
+
                 return Unauthorized();
             }
 
@@ -180,6 +187,8 @@ namespace Organisation.ServiceLayer
         {
             if (AuthorizeAndFetchCvr(cvr, apiKey) == null)
             {
+                log.Warn("Rejected access to OrgUnit Read operation on " + uuid);
+
                 return Unauthorized();
             }
 

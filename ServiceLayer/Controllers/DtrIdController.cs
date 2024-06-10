@@ -9,7 +9,7 @@ using Organisation.BusinessLayer.DTO.Read;
 namespace Organisation.ServiceLayer
 {
     [Route("api/[controller]")]
-    public class DtrIdController : Controller
+    public class DtrIdController : BaseController
     {
         private static log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private InspectorService service = new InspectorService();
@@ -17,6 +17,11 @@ namespace Organisation.ServiceLayer
         [HttpGet]
         public IActionResult Read([FromHeader] string cvr, [FromHeader] string apiKey)
         {
+            if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
+            {
+                return Unauthorized();
+            }
+
             List<UserDTO> result = new List<UserDTO>();
 
             try {

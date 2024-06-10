@@ -84,9 +84,9 @@ namespace Organisation.IntegrationLayer
 
                 log.Debug("Ret succesful on Organisation with uuid " + OrganisationRegistryProperties.MunicipalityOrganisationUUID);
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Ret service on Organisation", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Ret", "Organisation");
             }
         }
 
@@ -149,9 +149,9 @@ namespace Organisation.IntegrationLayer
 
                 return result;
             }
-            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException)
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
-                throw new ServiceNotFoundException("Failed to establish connection to the Laes service on Organisation", ex);
+                throw StubUtil.CheckForTemporaryError(ex, "Laes", "Organisation");
             }
         }
     }

@@ -189,6 +189,28 @@ namespace Organisation.BusinessLayer
                     continue;
                 }
 
+                /* enable this setting AFTER doing a full sync for the municipality, so the new functions are in play */
+                if (existingRoleRegistration.RelationListe.TilknyttedeBrugere.Length > 1)
+                {
+                    if (OrganisationRegistryProperties.AppSettings.CleanupMultiUserOrgFunctions)
+                    {
+                        log.Info("Found organisationFunction object with multiple Bruger relations for user " + user.Uuid + " / " + user.UserId + " - attempting to fix");
+
+                        // terminate this orgFunction
+                        try
+                        {
+                            organisationFunktionStub.Deactivate(unitRole.ObjektType.UUIDIdentifikator, DateTime.Now.AddMinutes(-5), false, true);
+                        }
+                        catch (Exception ex)
+                        {
+                            log.Warn("Failed to terminate function " + unitRole.ObjektType.UUIDIdentifikator + " for user " + user.UserId, ex);
+                        }
+                    }
+
+                    // do not continue after this - we cannot handle this type of OrgFunction anyway
+                    continue;
+                }
+
                 // figure out everything relevant about the position object in Organisation
                 EgenskabType latestProperty = StubUtil.GetLatestProperty(existingRoleRegistration.AttributListe.Egenskab);
                 string existingRoleUuid = unitRole.ObjektType.UUIDIdentifikator;
@@ -260,6 +282,13 @@ namespace Organisation.BusinessLayer
                     if (existingRoleRegistration.RelationListe.TilknyttedeEnheder.Length != 1)
                     {
                         log.Warn("User '" + user.Uuid + "' has an existing position in Organisation with " + existingRoleRegistration.RelationListe.TilknyttedeEnheder.Length + " associated OrgUnits");
+                        continue;
+                    }
+
+                    /* ignore those created by SG - create new ones instead */
+                    if (existingRoleRegistration.RelationListe.TilknyttedeBrugere.Length > 1)
+                    {
+                        // we removed those above, so this is needed to ensure we re-add it as a stand-alone orgfunction
                         continue;
                     }
 

@@ -219,20 +219,16 @@ namespace Organisation.SchedulingLayer
             catch (TemporaryFailureException ex)
             {
                 log.Warn("Could not handle user '" + user.Uuid + "' at the moment, will try later", ex);
+// TODO: add field. so we can check against it
+//                if (user.priority < 20)
+//                {
+                    dao.LowerPriority(user.Id);
+//                }
+
                 return SyncResult.TemporaryFailure;
             }
             catch (Exception ex)
             {
-                // TODO: this is a hack - we get this sporadically on calls to Import on Bruger,
-                // and we don't want to to be handled as errors, but we also don't want them to block
-                // calls on other users, so we lower priority, and log it as a special kind of error
-                if (ex is AggregateException && ex.Message.Contains("Could not commit transaction"))
-                {
-                    log.Debug("Got Rollback error from KMD on " + user.Uuid + " / " + user.Cvr, ex);
-                    dao.LowerPriority(user.Id);
-                    return SyncResult.KmdRollbackException;
-                }
-
                 log.Error("Could not handle user " + user.Uuid + " / " + user.Cvr, ex);
                 dao.OnFailure(user.Id, ex.Message);
                 dao.Delete(user.Id);
