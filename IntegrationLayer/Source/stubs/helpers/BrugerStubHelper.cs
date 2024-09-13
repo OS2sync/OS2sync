@@ -156,7 +156,7 @@ namespace Organisation.IntegrationLayer
             return organisationType;
         }
 
-        internal AdresseFlerRelationType CreateAddressReference(string uuid, int indeks, string roleUuid, VirkningType virkning)
+        internal AdresseFlerRelationType CreateAddressReference(string uuid, string roleUuid, VirkningType virkning)
         {
             UuidLabelInputType type = new UuidLabelInputType();
             type.Item = UUIDConstants.ADDRESS_TYPE_USER;
@@ -169,7 +169,7 @@ namespace Organisation.IntegrationLayer
             AdresseFlerRelationType address = new AdresseFlerRelationType();
             address.ReferenceID = StubUtil.GetReference<UnikIdType>(uuid, ItemChoiceType.UUIDIdentifikator);
             address.Virkning = virkning;
-            address.Indeks = "" + indeks;
+            address.Indeks = Guid.NewGuid().ToString().ToLower();
             address.Rolle = role;
             address.Type = type;
 
@@ -195,27 +195,27 @@ namespace Organisation.IntegrationLayer
                 switch (addressRelation.Type)
                 {
                     case AddressRelationType.EMAIL:
-                        AdresseFlerRelationType emailAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_EMAIL, virkning);
+                        AdresseFlerRelationType emailAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_USER_EMAIL, virkning);
                         registration.RelationListe.Adresser[i] = emailAddress;
                         break;
                     case AddressRelationType.RACFID:
-                        AdresseFlerRelationType racfId = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_RACFID, virkning);
+                        AdresseFlerRelationType racfId = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_USER_RACFID, virkning);
                         registration.RelationListe.Adresser[i] = racfId;
                         break;
                     case AddressRelationType.PHONE:
-                        AdresseFlerRelationType phoneAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_PHONE, virkning);
+                        AdresseFlerRelationType phoneAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_USER_PHONE, virkning);
                         registration.RelationListe.Adresser[i] = phoneAddress;
                         break;
                     case AddressRelationType.LOCATION:
-                        AdresseFlerRelationType locationAddres = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_LOCATION, virkning);
+                        AdresseFlerRelationType locationAddres = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_USER_LOCATION, virkning);
                         registration.RelationListe.Adresser[i] = locationAddres;
                         break;
                     case AddressRelationType.LANDLINE:
-                        AdresseFlerRelationType landlineAddres = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_LANDLINE, virkning);
+                        AdresseFlerRelationType landlineAddres = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_USER_LANDLINE, virkning);
                         registration.RelationListe.Adresser[i] = landlineAddres;
                         break;
                     case AddressRelationType.FMKID:
-                        AdresseFlerRelationType fmkidAddres = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_USER_FMKID, virkning);
+                        AdresseFlerRelationType fmkidAddres = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_USER_FMKID, virkning);
                         registration.RelationListe.Adresser[i] = fmkidAddres;
                         break;
                     default:

@@ -454,7 +454,7 @@ namespace Organisation.IntegrationLayer
             registration.AttributListe.Egenskab = egenskab;
         }
 
-        internal AdresseFlerRelationType CreateAddressReference(string uuid, int indeks, string roleUuid, VirkningType virkning)
+        internal AdresseFlerRelationType CreateAddressReference(string uuid, string roleUuid, bool postAddress, bool primary, VirkningType virkning)
         {
             UuidLabelInputType type = new UuidLabelInputType();
             type.Item = UUIDConstants.ADDRESS_TYPE_ORGUNIT;
@@ -467,9 +467,27 @@ namespace Organisation.IntegrationLayer
             AdresseFlerRelationType address = new AdresseFlerRelationType();
             address.ReferenceID = StubUtil.GetReference<UnikIdType>(uuid, ItemChoiceType.UUIDIdentifikator);
             address.Virkning = virkning;
-            address.Indeks = "" + indeks;
             address.Rolle = role;
             address.Type = type;
+
+            // we generate a random UUID as index - it is not specced what this is used for, and it just needs to
+            // be unique, and it gives us problems if we user a sequential number, as this sometimes overlaps with
+            // previous indexes (e.g. when removing and adding addresses in the same update)
+            address.Indeks = Guid.NewGuid().ToString().ToLower();
+
+            // note that Post addresses on OU's needs to be sorted, so the primary UUID will be set to (1) in the first
+            // character, and the secondary to (2) as a convention to ensure this
+            if (postAddress)
+            {
+                if (primary)
+                {
+                    address.Indeks = "1" + address.Indeks.Substring(1);
+                }
+                else
+                {
+                    address.Indeks = "2" + address.Indeks.Substring(1);
+                }
+            }
 
             return address;
         }
@@ -545,75 +563,75 @@ namespace Organisation.IntegrationLayer
                 switch (addressRelation.Type)
                 {
                     case AddressRelationType.EMAIL:
-                        AdresseFlerRelationType emailAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_EMAIL, virkning);
+                        AdresseFlerRelationType emailAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_EMAIL, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = emailAddress;
                         break;
                     case AddressRelationType.PHONE:
-                        AdresseFlerRelationType phoneAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_PHONE, virkning);
+                        AdresseFlerRelationType phoneAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_PHONE, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = phoneAddress;
                         break;
                     case AddressRelationType.LOCATION:
-                        AdresseFlerRelationType locationAddres = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOCATION, virkning);
+                        AdresseFlerRelationType locationAddres = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOCATION, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = locationAddres;
                         break;
                     case AddressRelationType.LOSSHORTNAME:
-                        AdresseFlerRelationType losAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSSHORTNAME, virkning);
+                        AdresseFlerRelationType losAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSSHORTNAME, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = losAddress;
                         break;
                     case AddressRelationType.CONTACT_ADDRESS_OPEN_HOURS:
-                        AdresseFlerRelationType contactOpenHoursAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_CONTACT_ADDRESS_OPEN_HOURS, virkning);
+                        AdresseFlerRelationType contactOpenHoursAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_CONTACT_ADDRESS_OPEN_HOURS, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = contactOpenHoursAddress;
                         break;
                     case AddressRelationType.DTR_ID:
-                        AdresseFlerRelationType dtrId = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_DTR_ID, virkning);
+                        AdresseFlerRelationType dtrId = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_DTR_ID, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = dtrId;
                         break;
                     case AddressRelationType.URL:
-                        AdresseFlerRelationType urlAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_URL, virkning);
+                        AdresseFlerRelationType urlAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_URL, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = urlAddress;
                         break;
                     case AddressRelationType.LANDLINE:
-                        AdresseFlerRelationType landlineAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_LANDLINE, virkning);
+                        AdresseFlerRelationType landlineAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_LANDLINE, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = landlineAddress;
                         break;
                     case AddressRelationType.EAN:
-                        AdresseFlerRelationType eanAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_EAN, virkning);
+                        AdresseFlerRelationType eanAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_EAN, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = eanAddress;
                         break;
                     case AddressRelationType.LOSID:
-                        AdresseFlerRelationType losIdAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSID, virkning);
+                        AdresseFlerRelationType losIdAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_LOSID, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = losIdAddress;
                         break;
                     case AddressRelationType.PHONE_OPEN_HOURS:
-                        AdresseFlerRelationType phoneOpenHoursAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_PHONE_OPEN_HOURS, virkning);
+                        AdresseFlerRelationType phoneOpenHoursAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_PHONE_OPEN_HOURS, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = phoneOpenHoursAddress;
                         break;
                     case AddressRelationType.POST:
-                        AdresseFlerRelationType postAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_POST, virkning);
+                        AdresseFlerRelationType postAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_POST, true, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = postAddress;
                         break;
                     case AddressRelationType.CONTACT_ADDRESS:
-                        AdresseFlerRelationType contactAddress = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_CONTACT_ADDRESS, virkning);
+                        AdresseFlerRelationType contactAddress = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_CONTACT_ADDRESS, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = contactAddress;
                         break;
                     case AddressRelationType.EMAIL_REMARKS:
-                        AdresseFlerRelationType emailRemarks = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_EMAIL_REMARKS, virkning);
+                        AdresseFlerRelationType emailRemarks = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_EMAIL_REMARKS, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = emailRemarks;
                         break;
                     case AddressRelationType.POST_RETURN:
-                        AdresseFlerRelationType postReturn = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_POST_RETURN, virkning);
+                        AdresseFlerRelationType postReturn = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_POST_RETURN, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = postReturn;
                         break;
                     case AddressRelationType.FOA:
-                        AdresseFlerRelationType foa = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_FOA, virkning);
+                        AdresseFlerRelationType foa = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_FOA, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = foa;
                         break;
                     case AddressRelationType.PNR:
-                        AdresseFlerRelationType pnr = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_PNR, virkning);
+                        AdresseFlerRelationType pnr = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_PNR, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = pnr;
                         break;
                     case AddressRelationType.SOR:
-                        AdresseFlerRelationType sor = CreateAddressReference(addressRelation.Uuid, (i + 1), UUIDConstants.ADDRESS_ROLE_ORGUNIT_SOR, virkning);
+                        AdresseFlerRelationType sor = CreateAddressReference(addressRelation.Uuid, UUIDConstants.ADDRESS_ROLE_ORGUNIT_SOR, false, addressRelation.Prime, virkning);
                         registration.RelationListe.Adresser[i] = sor;
                         break;
                     default:

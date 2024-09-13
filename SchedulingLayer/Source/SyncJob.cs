@@ -32,11 +32,26 @@ namespace Organisation.SchedulingLayer
                     log.Debug("Scheduler started synchronizing objects from queue");
 
                     // empties the entire queue before moving to users
-                    HandleOUs();
+                    Exception ouException = null;
+                    try
+                    {
+                        HandleOUs();
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Warn("OU sync failed - throwing later", ex);
+                        // store for later throw - but we want to ensure we also handle users
+                        ouException = ex;
+                    }
 
                     // handles 100 users max, before looping (so it logs progress periodically, but also so we ensure that ous are handled,
                     // even when we are synchronising 10.000+ users
                     HandleUsers();
+
+                    if (ouException != null)
+                    {
+                        throw ouException;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -82,6 +97,21 @@ namespace Organisation.SchedulingLayer
             int totalCount = 0;
 
             var users = dao.GetOldestEntries();
+
+            // remove duplicates to avoid sync'ing the same user in parallel (possible creating duplicate address entries and other stuff)
+            users = users.GroupBy(u => u.Uuid)
+                .Select(duplicateUsers => {
+                    // order users by Id desc
+                    var oUsers = duplicateUsers.OrderByDescending(user => user.Id);
+
+                    // remove all but first
+                    oUsers.Skip(1).ToList().ForEach(user => dao.Delete(user.Id));
+
+                    // return first
+                    return oUsers.First();
+                }
+            ).ToList();
+
             while (users.Count > 0)
             {
                 totalCount += users.Count;
@@ -245,6 +275,21 @@ namespace Organisation.SchedulingLayer
             bool temporaryFailure = false;
 
             var orgUnits = dao.GetOldestEntries();
+
+            // remove duplicates to avoid sync'ing the same OU in parallel (possible creating duplicate address entries and other stuff)
+            orgUnits = orgUnits.GroupBy(u => u.Uuid)
+                .Select(duplicateOUs => {
+                    // order orgUnits by Id desc
+                    var ous = duplicateOUs.OrderByDescending(user => user.Id);
+
+                    // remove all but first
+                    ous.Skip(1).ToList().ForEach(ou => dao.Delete(ou.Id));
+
+                    // return first
+                    return ous.First();
+                }
+            ).ToList();
+
             while (orgUnits.Count > 0)
             {
                 Parallel.ForEach(orgUnits, (orgUnit) =>

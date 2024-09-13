@@ -15,7 +15,12 @@ namespace Organisation.IntegrationLayer
         public string ApiKey { get; set; }
         public string CvrUuid { get; set; }
         public bool TrustAllCertificates { get; set; } = false;
+        public bool PassiverAndReImportOnErrors { get; set; } = false;
         public string Environment { get; set; } = "PROD";
+        
         public bool CleanupMultiUserOrgFunctions { get; set; } = false;
+
+        // flip to TRUE, and updates on OUs will start by wiping all existing addresses, and then creating new ones
+        public bool RecreateOrgunitAddresses { get; set; } = false;
     }
 }

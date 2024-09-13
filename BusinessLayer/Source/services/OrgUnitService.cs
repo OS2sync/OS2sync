@@ -138,6 +138,16 @@ namespace Organisation.BusinessLayer
                 }
                 else
                 {
+                    // wipe all existing addresses if needed
+                    if (OrganisationRegistryProperties.AppSettings.RecreateOrgunitAddresses)
+                    {
+                        // terminate all Address relationships
+                        organisationEnhedStub.WipeAddresses(registration.Uuid, registration.Timestamp);
+
+                        // reload to re-add addresses :)
+                        result = organisationEnhedStub.GetLatestRegistration(registration.Uuid);
+                    }
+
                     var addressRefs = UpdateAddresses(registration, result);
 
                     // this must happen after addresses have been imported, as it might result in UUID's being created
@@ -1055,7 +1065,7 @@ namespace Organisation.BusinessLayer
                     {
                         registration.SOR = address.Value;
                     }
-                    if (address is DTO.Read.Post)
+                    else if (address is DTO.Read.Post)
                     {
                         posts.Add(address);
                     }

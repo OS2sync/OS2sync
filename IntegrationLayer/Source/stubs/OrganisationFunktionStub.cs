@@ -768,6 +768,75 @@ namespace Organisation.IntegrationLayer
             return result;
         }
 
+        public FiltreretOejebliksbilledeType[] SoegAndRead(string functionsTypeUuid, int offset, int amount)
+        {
+            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Soeg");
+
+            SoegInputType1 soegInput = new SoegInputType1();
+            soegInput.AttributListe = new AttributListeType();
+            soegInput.RelationListe = new RelationListeType();
+            soegInput.TilstandListe = new TilstandListeType();
+
+            // only return objects that have a Tilhører relationship top-level Organisation
+            UnikIdType orgReference = StubUtil.GetReference<UnikIdType>(OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()], ItemChoiceType.UUIDIdentifikator);
+            soegInput.RelationListe.TilknyttedeOrganisationer = new OrganisationFlerRelationType[1];
+            soegInput.RelationListe.TilknyttedeOrganisationer[0] = new OrganisationFlerRelationType();
+            soegInput.RelationListe.TilknyttedeOrganisationer[0].ReferenceID = orgReference;
+
+            // only return active objects
+            soegInput.TilstandListe.Gyldighed = new GyldighedType[1];
+            soegInput.TilstandListe.Gyldighed[0] = new GyldighedType();
+            soegInput.TilstandListe.Gyldighed[0].GyldighedStatusKode = GyldighedStatusKodeType.Aktiv;
+
+            // only return objects with this specific functionTypeUuid
+            UnikIdType reference = new UnikIdType();
+            reference.Item = functionsTypeUuid;
+            reference.ItemElementName = ItemChoiceType.UUIDIdentifikator;
+
+            KlasseRelationType funktionsType = new KlasseRelationType();
+            funktionsType.ReferenceID = reference;
+            soegInput.RelationListe.Funktionstype = funktionsType;
+
+            // search with pagination
+            soegRequest request = new soegRequest();
+            request.SoegInput = soegInput;
+            request.SoegInput.MaksimalAntalKvantitet = amount.ToString();
+            request.SoegInput.FoersteResultatReference = offset.ToString();
+
+            try
+            {
+                soegResponse response = channel.soegAsync(request).Result;
+                int statusCode = Int32.Parse(response.SoegOutput.StandardRetur.StatusKode);
+                if (statusCode != 20 && statusCode != 44) // 44 is empty search result
+                {
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Soeg", BrugerStubHelper.SERVICE, response.SoegOutput.StandardRetur.FejlbeskedTekst);
+                    log.Error(message);
+                    throw new SoapServiceException(message);
+                }
+
+                List<string> functions = new List<string>();
+                if (statusCode == 20)
+                {
+                    foreach (string id in response.SoegOutput.IdListe)
+                    {
+                        functions.Add(id);
+                    }
+                }
+
+                if (functions.Count > 0)
+                {
+                    // translate to FiltreretOejebliksbilledeType
+                    return GetLatestRegistrations(functions.ToArray(), false);
+                }
+
+                return new FiltreretOejebliksbilledeType[0];
+            }
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
+            {
+                throw StubUtil.CheckForTemporaryError(ex, "Soeg", "OrganisationFunktion");
+            }
+        }
+
         private List<string> Soeg(string functionsTypeUuid, string userUuid, string unitUuid, string itSystemUuid)
         {
             OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Soeg");

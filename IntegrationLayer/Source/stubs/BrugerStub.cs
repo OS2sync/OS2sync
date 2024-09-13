@@ -75,6 +75,39 @@ namespace Organisation.IntegrationLayer
             }
         }
 
+        public void Passiver(string uuid)
+        {
+            log.Debug("Attempting Passiver on Bruger with uuid " + uuid);
+
+            // construct request
+            UuidNoteInputType input = new UuidNoteInputType();
+            input.UUIDIdentifikator = uuid;
+
+            passiverRequest request = new passiverRequest();
+            request.PassiverInput = input;
+
+            // send request
+            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Passiver");
+
+            try
+            {
+                var result = channel.passiverAsync(request).Result;
+                int statusCode = Int32.Parse(result.PassiverOutput.StandardRetur.StatusKode);
+                if (statusCode != 20)
+                {
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Passiver", BrugerStubHelper.SERVICE, result.PassiverOutput.StandardRetur.FejlbeskedTekst);
+                    log.Error(message);
+                    throw new SoapServiceException(message);
+                }
+
+                log.Debug("Passiver successful on Bruger with uuid " + uuid);
+            }
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
+            {
+                throw StubUtil.CheckForTemporaryError(ex, "Passiver", "Bruger");
+            }
+        }
+
         // Deactivates the user by setting the Gyldighed attribute to Inactive
         public void Deactivate(string uuid, DateTime timestamp)
         {
@@ -302,78 +335,13 @@ namespace Organisation.IntegrationLayer
                                         continue;
                                 }
 
-                                AdresseFlerRelationType newAddress = helper.CreateAddressReference(uuidToAdd, (i + 1), roleUuid, virkning);
+                                AdresseFlerRelationType newAddress = helper.CreateAddressReference(uuidToAdd, roleUuid, virkning);
                                 newAdresser[i++] = newAddress;
                             }
                         }
                     }
                     input.RelationListe.Adresser = newAdresser;
                     changes = true;
-                }
-
-                // FIX: indexes on existing users are sometimes broken, so we just reindex (noone uses the indexes for anything anyway)
-                //      note that this does not count as a change - if no changes are present, just ignore the reindex
-
-                if (input?.RelationListe?.Adresser != null)
-                {
-                    int idx = 0;
-
-                    // find largest index
-                    foreach (var adresseRef in input.RelationListe.Adresser)
-                    {
-                        if (adresseRef.Indeks != null)
-                        {
-                            int indeksValue;
-                            if (Int32.TryParse(adresseRef.Indeks, out indeksValue))
-                            {
-                                if (indeksValue > idx)
-                                {
-                                    idx = indeksValue;
-                                }
-                            }
-                        }
-                    }
-
-                    // add one
-                    idx++;
-
-                    // find any duplicates and fix them
-                    for (int i = 0; i < input.RelationListe.Adresser.Length; i++)
-                    {
-                        var adresseRef = input.RelationListe.Adresser[i];
-
-                        if (adresseRef.Indeks != null)
-                        {
-                            int indeksValue;
-                            if (Int32.TryParse(adresseRef.Indeks, out indeksValue))
-                            {
-                                bool duplicate = false;
-                                for (int j = i + 1; j < input.RelationListe.Adresser.Length; j++)
-                                {
-                                    var adresseRef2 = input.RelationListe.Adresser[j];
-                                    if (adresseRef2.Indeks != null)
-                                    {
-                                        int indeksValue2;
-                                        if (Int32.TryParse(adresseRef2.Indeks, out indeksValue2))
-                                        {
-                                            if (indeksValue == indeksValue2)
-                                            {
-                                                duplicate = true;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // if another adresseRef has the same Index, use the new largest index (and increment)
-                                if (duplicate)
-                                {
-                                    adresseRef.Indeks = idx.ToString();
-                                    idx++;
-                                }
-                            }
-                        }
-                    }
                 }
                 #endregion
 
@@ -467,6 +435,15 @@ namespace Organisation.IntegrationLayer
                     if (statusCode == 49)
                     {
                         log.Warn("Ret failed on Bruger " + user.Uuid + " as Organisation returned status 49. The most likely cause is that the object has been Passiveret");
+                        return;
+                    }
+                    else if (statusCode == 40 && OrganisationRegistryProperties.AppSettings.PassiverAndReImportOnErrors)
+                    {
+                        log.Warn("Ret failed on Bruger " + user.Uuid + " with errorCode 40 - attempting Passiver followed by Importer");
+
+                        Passiver(user.Uuid);
+                        Importer(user);
+
                         return;
                     }
 

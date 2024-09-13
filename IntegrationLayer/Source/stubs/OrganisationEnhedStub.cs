@@ -81,6 +81,102 @@ namespace Organisation.IntegrationLayer
             }
         }
 
+        public void Passiver(string uuid)
+        {
+            log.Debug("Attempting Passiver on OrganisationEnhed with uuid " + uuid);
+
+            // construct request
+            UuidNoteInputType input = new UuidNoteInputType();
+            input.UUIDIdentifikator = uuid;
+
+            passiverRequest request = new passiverRequest();
+            request.PassiverInput = input;
+
+            // send request
+            OrganisationEnhedPortType channel = StubUtil.CreateChannel<OrganisationEnhedPortType>(OrganisationEnhedStubHelper.SERVICE, "Passiver");
+
+            try
+            {
+                var result = channel.passiverAsync(request).Result;
+                int statusCode = Int32.Parse(result.PassiverOutput.StandardRetur.StatusKode);
+                if (statusCode != 20)
+                {
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Passiver", OrganisationEnhedStubHelper.SERVICE, result.PassiverOutput.StandardRetur.FejlbeskedTekst);
+                    log.Error(message);
+                    throw new SoapServiceException(message);
+                }
+
+                log.Debug("Passiver successful on OrganisationEnhed with uuid " + uuid);
+            }
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
+            {
+                throw StubUtil.CheckForTemporaryError(ex, "Passiver", "OrganisationEnhed");
+            }
+        }
+
+        public void WipeAddresses(string uuid, DateTime timestamp)
+        {
+            log.Debug("Attempting WipeAllAddresses on OrganisationEnhed with uuid " + uuid);
+
+            RegistreringType1 registration = GetLatestRegistration(uuid);
+            if (registration == null)
+            {
+                log.Debug("Cannot call WipeAllAddresses on OrganisationEnhed with uuid " + uuid + " because it does not exist in Organisation");
+                return;
+            }
+
+            OrganisationEnhedPortType channel = StubUtil.CreateChannel<OrganisationEnhedPortType>(OrganisationEnhedStubHelper.SERVICE, "WipeAllAddresses");
+
+            try
+            {
+                bool changes = false;
+
+                RetInputType1 input = new RetInputType1();
+                input.UUIDIdentifikator = uuid;
+                input.AttributListe = registration.AttributListe;
+                input.TilstandListe = registration.TilstandListe;
+                input.RelationListe = registration.RelationListe;
+
+                // terminate the Virkning on all address relationships
+                changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.Adresser, new object[0], timestamp, true) || changes;
+
+                // if no changes are made, we do not call the service
+                if (!changes)
+                {
+                    log.Debug("WipeAllAddresses on OrganisationEnhed with uuid " + uuid + " cancelled because of no changes");
+                    return;
+                }
+
+                // send Ret request
+                retRequest request = new retRequest();
+                request.RetInput = input;
+
+                retResponse response = channel.retAsync(request).Result;
+
+                int statusCode = Int32.Parse(response.RetOutput.StandardRetur.StatusKode);
+                if (statusCode != 20)
+                {
+                    if (statusCode == 49)
+                    {
+                        log.Warn("WipeAllAddresses failed on OrgUnit " + uuid + " as Organisation returned status 49. The most likely cause is that the object has been Passiveret");
+                        return;
+                    }
+
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "WipeAllAddresses", OrganisationEnhedStubHelper.SERVICE, response.RetOutput.StandardRetur.FejlbeskedTekst);
+                    log.Error(message);
+                    throw new SoapServiceException(message);
+                }
+
+                log.Debug("WipeAllAddresses succesful on OrganisationEnhed with uuid " + uuid);
+            }
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
+            {
+                throw StubUtil.CheckForTemporaryError(ex, "WipeAllAddresses", "OrganisationEnhed");
+            }
+        }
+
+        // TODO: begynd at anvende UUID'er som index'er - og genbrug hvis match (dvs ingen ændring), men ved alle ændringer så laver vi nye adresser, og
+        //       peger på dem, og så uuid som index, så får vi aldrig overlap. Det bør også sikre at oprydning ALTID fungerer...
         public void Ret(OrgUnitData unit)
         {
             log.Debug("Attempting Ret on OrganisationEnhed with uuid " + unit.Uuid);
@@ -146,86 +242,6 @@ namespace Organisation.IntegrationLayer
 
                 // add references to address objects that are new
                 List<string> uuidsToAdd = StubUtil.FindAllObjectsInLocalNotInOrg(input.RelationListe.Adresser, unit.Addresses, true);
-
-                // find all POST addresses after termination
-                var posts = new List<AdresseFlerRelationType>();
-                if (input.RelationListe?.Adresser != null)
-                {
-                    foreach (var adresse in input.RelationListe.Adresser)
-                    {
-                        if (UUIDConstants.ADDRESS_ROLE_ORGUNIT_POST.Equals(adresse.Type))
-                        {
-                            posts.Add(adresse);
-                        }
-                    }
-                }
-
-                AdresseFlerRelationType currentPost = null, currentSecondaryPost = null;
-                bool reindexPost = false;
-                if (posts.Count > 0)
-                {
-                    // sort by index
-                    posts.Sort((x, y) => x.Indeks.CompareTo(y.Indeks));
-
-                    foreach (var post in posts)
-                    {
-                        // if it does not exist in local, we can ignore it, as it was removed above
-                        bool foundInLocal = false;
-
-                        foreach (var unitAddress in unit.Addresses)
-                        {
-                            if (unitAddress.Uuid.Equals(post.ReferenceID.Item))
-                            {
-                                foundInLocal = true;
-                                break;
-                            }
-                        }
-
-                        if (!foundInLocal)
-                        {
-                            continue;
-                        }
-
-                        if (currentPost == null)
-                        {
-                            currentPost = post;
-                        }
-                        else if (currentSecondaryPost == null)
-                        {
-                            currentSecondaryPost = post;
-                        }
-                    }
-
-                    if (currentPost != null)
-                    {
-                        foreach (var unitAddress in unit.Addresses)
-                        {
-                            if (unitAddress.Uuid.Equals(currentPost.ReferenceID.Item))
-                            {
-                                if (!unitAddress.Prime)
-                                {
-                                    // no longer prime, reindex'ing needed
-                                    reindexPost = true;
-                                }
-                            }
-                        }
-                    }
-
-                    if (currentSecondaryPost != null)
-                    {
-                        foreach (var unitAddress in unit.Addresses)
-                        {
-                            if (unitAddress.Uuid.Equals(currentSecondaryPost.ReferenceID.Item))
-                            {
-                                if (unitAddress.Prime)
-                                {
-                                    // no longer prime, reindex'ing needed
-                                    reindexPost = true;
-                                }
-                            }
-                        }
-                    }
-                }
 
                 if (uuidsToAdd.Count > 0)
                 {
@@ -309,100 +325,13 @@ namespace Organisation.IntegrationLayer
                                         continue;
                                 }
 
-                                AdresseFlerRelationType newAddress = helper.CreateAddressReference(uuidToAdd, (i + 1), roleUuid, virkning);
+                                AdresseFlerRelationType newAddress = helper.CreateAddressReference(uuidToAdd, roleUuid, (addressInLocal.Type == AddressRelationType.POST), addressInLocal.Prime, virkning);
                                 newAdresser[i++] = newAddress;
                             }
                         }
                     }
+
                     input.RelationListe.Adresser = newAdresser;
-                    changes = true;
-                }
-
-                // FIX: indexes on existing users are sometimes broken, so we just reindex (noone uses the indexes for anything anyway)
-                //      note that this does not count as a change - if no changes are present, just ignore the reindex
-
-                int idx = 0;
-                if (input?.RelationListe?.Adresser != null)
-                {
-                    // find largest index
-                    foreach (var adresseRef in input.RelationListe.Adresser)
-                    {
-                        if (adresseRef.Indeks != null)
-                        {
-                            int indeksValue;
-                            if (Int32.TryParse(adresseRef.Indeks, out indeksValue))
-                            {
-                                if (indeksValue > idx)
-                                {
-                                    idx = indeksValue;
-                                }
-                            }
-                        }
-                    }
-
-                    // add one
-                    idx++;
-
-                    // find any duplicates and fix them
-                    for (int i = 0; i < input.RelationListe.Adresser.Length; i++)
-                    {
-                        var adresseRef = input.RelationListe.Adresser[i];
-
-                        if (adresseRef.Indeks != null)
-                        {
-                            int indeksValue;
-                            if (Int32.TryParse(adresseRef.Indeks, out indeksValue))
-                            {
-                                bool duplicate = false;
-                                for (int j = i + 1; j < input.RelationListe.Adresser.Length; j++)
-                                {
-                                    var adresseRef2 = input.RelationListe.Adresser[j];
-                                    if (adresseRef2.Indeks != null)
-                                    {
-                                        int indeksValue2;
-                                        if (Int32.TryParse(adresseRef2.Indeks, out indeksValue2))
-                                        {
-                                            if (indeksValue == indeksValue2)
-                                            {
-                                                duplicate = true;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // if another adresseRef has the same Index, use the new largest index (and increment)
-                                if (duplicate)
-                                {
-                                    adresseRef.Indeks = idx.ToString();
-                                    idx++;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (reindexPost)
-                {
-                    int primaryIdx = ++idx;
-                    int secondaryIdx = ++idx;
-
-                    for (int i = 0; i < input.RelationListe.Adresser.Length; i++)
-                    {
-                        var adresseRef = input.RelationListe.Adresser[i];
-                        if (adresseRef == currentPost)
-                        {
-                            // make current to secondary
-                            currentPost.Indeks = secondaryIdx.ToString();
-                        }
-                        else if (adresseRef == currentSecondaryPost)
-                        {
-                            // make current to secondary
-                            currentPost.Indeks = primaryIdx.ToString();
-                        }
-                    }
-
-                    // this is a change
                     changes = true;
                 }
 
@@ -546,6 +475,15 @@ namespace Organisation.IntegrationLayer
                     if (statusCode == 49)
                     {
                         log.Warn("Ret failed on OrgUnit " + unit.Uuid + " as Organisation returned status 49. The most likely cause is that the object has been Passiveret");
+                        return;
+                    }
+                    else if (statusCode == 40 && OrganisationRegistryProperties.AppSettings.PassiverAndReImportOnErrors)
+                    {
+                        log.Warn("Ret failed on OrgUnit " + unit.Uuid + " with errorCode 40 - attempting Passiver followed by Importer");
+
+                        Passiver(unit.Uuid);
+                        Importer(unit);
+
                         return;
                     }
 

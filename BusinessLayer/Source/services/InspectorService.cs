@@ -987,6 +987,44 @@ namespace Organisation.BusinessLayer
             };
         }
 
+        public List<FiltreretOejebliksbilledeType> FindAllFunctions()
+        {
+            List<FiltreretOejebliksbilledeType> result = new List<FiltreretOejebliksbilledeType>();
+
+            int amount = OrganisationRegistryProperties.AppSettings.ReadSettings.HierarchyGrouping, offset = 0;
+
+            var res = organisationFunktionStub.SoegAndRead(UUIDConstants.ORGFUN_POSITION, offset, amount);
+            while (res.Length > 0)
+            {
+                foreach (var entry in res)
+                {
+                    if (entry.Registrering != null && entry.Registrering.Length > 0)
+                    {
+                        if (entry.Registrering[0].AttributListe?.Egenskab != null && entry.Registrering[0].AttributListe.Egenskab.Length > 0)
+                        {
+                            // must be a "members of" function
+                            if (entry.Registrering[0].AttributListe.Egenskab[0].FunktionNavn != null && entry.Registrering[0].AttributListe.Egenskab[0].FunktionNavn.ToLower().StartsWith("members of"))
+                            {
+                                // need at least 1 user attached
+                                if (entry.Registrering[0].RelationListe?.TilknyttedeBrugere != null && entry.Registrering[0].RelationListe.TilknyttedeBrugere.Length > 0)
+                                {
+                                    result.Add(entry);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                log.Info("Found another " + res.Length + " functions");
+                log.Info("Filtered to " + result.Count + " functions in total");
+
+                offset += amount;
+                res = organisationFunktionStub.SoegAndRead(UUIDConstants.ORGFUN_POSITION, offset, amount);
+            }
+
+            return result;
+        }
+
         public List<string> FindAllUsers(List<OU> ous = null)
         {
             List<string> result = new List<string>();
