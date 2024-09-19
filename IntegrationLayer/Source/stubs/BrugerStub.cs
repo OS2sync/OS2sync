@@ -228,6 +228,31 @@ namespace Organisation.IntegrationLayer
                 return;
             }
 
+            // identify if duplicate address references are present, and perform passiver/import in that case
+            if (OrganisationRegistryProperties.AppSettings.PassiverAndReImportOnErrors)
+            {
+                var addresses = registration?.RelationListe?.Adresser;
+                if (addresses != null)
+                {
+                    List<string> addressReferenceUuids = new List<string>();
+
+                    foreach (var address in addresses)
+                    {
+                        string uuidReference = address.ReferenceID.Item;
+                        if (addressReferenceUuids.Contains(uuidReference))
+                        {
+                            log.Info("Detected address duplicates on " + user.Uuid + " performing Passiver and Import");
+                            Passiver(user.Uuid);
+                            Importer(user);
+
+                            return;
+                        }
+
+                        addressReferenceUuids.Add(uuidReference);
+                    }
+                }
+            }
+
             VirkningType virkning = helper.GetVirkning(user.Timestamp);
 
             BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Ret");

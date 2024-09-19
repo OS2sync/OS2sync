@@ -175,8 +175,6 @@ namespace Organisation.IntegrationLayer
             }
         }
 
-        // TODO: begynd at anvende UUID'er som index'er - og genbrug hvis match (dvs ingen ændring), men ved alle ændringer så laver vi nye adresser, og
-        //       peger på dem, og så uuid som index, så får vi aldrig overlap. Det bør også sikre at oprydning ALTID fungerer...
         public void Ret(OrgUnitData unit)
         {
             log.Debug("Attempting Ret on OrganisationEnhed with uuid " + unit.Uuid);
@@ -186,6 +184,31 @@ namespace Organisation.IntegrationLayer
             {
                 log.Debug("Cannot call Ret on OrganisationEnhed with uuid " + unit.Uuid + " because it does not exist in Organisation");
                 return;
+            }
+
+            // identify if duplicate address references are present, and perform passiver/import in that case
+            if (OrganisationRegistryProperties.AppSettings.PassiverAndReImportOnErrors)
+            {
+                var addresses = registration?.RelationListe?.Adresser;
+                if (addresses != null)
+                {
+                    List<string> addressReferenceUuids = new List<string>();
+
+                    foreach (var address in addresses)
+                    {
+                        string uuidReference = address.ReferenceID.Item;
+                        if (addressReferenceUuids.Contains(uuidReference))
+                        {
+                            log.Info("Detected address duplicates on " + unit.Uuid + " performing Passiver and Import");
+                            Passiver(unit.Uuid);
+                            Importer(unit);
+
+                            return;
+                        }
+
+                        addressReferenceUuids.Add(uuidReference);
+                    }
+                }
             }
 
             VirkningType virkning = helper.GetVirkning(unit.Timestamp);
