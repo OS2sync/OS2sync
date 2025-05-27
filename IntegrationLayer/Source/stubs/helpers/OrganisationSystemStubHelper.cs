@@ -8,7 +8,5 @@ namespace Organisation.IntegrationLayer
     internal class OrganisationSystemStubHelper
     {
         internal const string SERVICE = "organisationsystem/6";
-
-        // TODO: dead class?
     }
 }

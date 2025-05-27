@@ -183,6 +183,12 @@ namespace Organisation.BusinessLayer
             {
                 RegistreringType1 existingRoleRegistration = unitRole.Registrering[0];
 
+                // some very broken existing data can have a null set
+                if (existingRoleRegistration.RelationListe.TilknyttedeEnheder == null)
+                {
+                    existingRoleRegistration.RelationListe.TilknyttedeBrugere = new BrugerFlerRelationType[0];
+                }
+
                 if (existingRoleRegistration.RelationListe.TilknyttedeEnheder.Length != 1)
                 {
                     log.Warn("User '" + user.Uuid + "' has an existing position in Organisation with " + existingRoleRegistration.RelationListe.TilknyttedeEnheder.Length + " associated OrgUnits");

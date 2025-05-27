@@ -128,7 +128,7 @@ namespace Organisation.IntegrationLayer
 
         internal bool UpdateOpgaver(List<string> opgaver, VirkningType virkning, RegistreringType1 registration, DateTime timestamp)
         {
-            if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableOpgaver.Count > 0)
+            if (!string.IsNullOrEmpty(OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableOpgaver))
             {
                 // true is global, disabled for all
                 if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableOpgaver.Contains("true"))

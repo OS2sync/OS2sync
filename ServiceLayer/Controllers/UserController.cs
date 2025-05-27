@@ -83,6 +83,35 @@ namespace Organisation.ServiceLayer
             return Ok();
         }
 
+        [HttpPost("passiver/{uuid}")]
+        public IActionResult Passiver(string uuid, [FromHeader] string cvr, [FromHeader] string apiKey)
+        {
+            if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
+            {
+                log.Warn("Rejected access to User Passiver operation");
+
+                return Unauthorized();
+            }
+
+            try
+            {
+                UserRegistrationExtended user = new UserRegistrationExtended()
+                {
+                    Uuid = uuid
+                };
+
+                userDao.Save(user, OperationType.PASSIVER, false, 10, cvr);
+            }
+            catch (Exception ex)
+            {
+                log.Error("Failed to save User", ex);
+
+                return BadRequest(ex.Message);
+            }
+
+            return Ok();
+        }
+
         [HttpPost("cleanup")]
         public IActionResult Cleanup([FromBody] string[] existingUsers, [FromHeader] string cvr, [FromHeader] string apiKey, [FromQuery] bool dryrun = false)
         {

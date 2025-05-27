@@ -60,23 +60,23 @@ namespace Organisation.SchedulingLayer
                     switch (errorCount)
                     {
                         case 1:
-                            nextRun = DateTime.Now.AddMinutes(1);
+                            nextRun = DateTime.Now.AddSeconds(30);
                             break;
                         case 2:
-                            nextRun = DateTime.Now.AddMinutes(3);
+                            nextRun = DateTime.Now.AddMinutes(1);
                             break;
                         default:
-                            nextRun = DateTime.Now.AddMinutes(5);
+                            nextRun = DateTime.Now.AddMinutes(2);
                             break;
                     }
 
                     if (errorCount < 10)
                     {
-                        log.Warn("Failed to run scheduler, sleeping until: " + nextRun.ToString("MM/dd/yyyy HH:mm"), ex);
+                        log.Warn("Failed to run scheduler, sleeping until: " + nextRun.ToString("MM/dd/yyyy HH:mm:ss"), ex);
                     }
                     else
                     {
-                        log.Error("Failed to run scheduler, sleeping until: " + nextRun.ToString("MM/dd/yyyy HH:mm"), ex);
+                        log.Error("Failed to run scheduler, sleeping until: " + nextRun.ToString("MM/dd/yyyy HH:mm:ss"), ex);
                     }
                 }
             }
@@ -214,6 +214,10 @@ namespace Organisation.SchedulingLayer
                 {
                     service.Delete(user.Uuid, user.Timestamp);
                 }
+                else if (user.Operation.Equals(OperationType.PASSIVER))
+                {
+                    service.Passiver(user.Uuid);
+                }
                 else
                 {
                     if (user.Operation.Equals(OperationType.UPDATE))
@@ -259,7 +263,15 @@ namespace Organisation.SchedulingLayer
             }
             catch (Exception ex)
             {
-                log.Error("Could not handle user " + user.Uuid + " / " + user.Cvr, ex);
+                if (ex is InvalidFieldsException)
+                {
+                    log.Warn("Could not handle user " + user.Uuid + " / " + user.Cvr, ex);
+                }
+                else
+                {
+                    log.Error("Could not handle user " + user.Uuid + " / " + user.Cvr, ex);
+                }
+
                 dao.OnFailure(user.Id, ex.Message);
                 dao.Delete(user.Id);
 
@@ -370,6 +382,10 @@ namespace Organisation.SchedulingLayer
                 if (ou.Operation.Equals(OperationType.DELETE))
                 {
                     service.Delete(ou.Uuid, ou.Timestamp);
+                }
+                else if (ou.Operation.Equals(OperationType.PASSIVER))
+                {
+                    service.Passiver(ou.Uuid);
                 }
                 else
                 {

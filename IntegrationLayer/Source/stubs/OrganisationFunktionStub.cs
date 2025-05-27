@@ -1,12 +1,9 @@
 ﻿using IntegrationLayer.OrganisationFunktion;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.SymbolStore;
 using System.IO;
 using System.Net;
-using System.Security.Cryptography;
 using System.ServiceModel;
-using System.Text;
 
 namespace Organisation.IntegrationLayer
 {
@@ -846,6 +843,11 @@ namespace Organisation.IntegrationLayer
             soegInput.RelationListe = new RelationListeType();
             soegInput.TilstandListe = new TilstandListeType();
 
+            // only search for active functions
+            soegInput.TilstandListe.Gyldighed = new GyldighedType[1];
+            soegInput.TilstandListe.Gyldighed[0] = new GyldighedType();
+            soegInput.TilstandListe.Gyldighed[0].GyldighedStatusKode = GyldighedStatusKodeType.Aktiv;
+
             // only return objects that have a Tilhører relationship top-level Organisation
             UnikIdType orgReference = StubUtil.GetReference<UnikIdType>(OrganisationRegistryProperties.MunicipalityOrganisationUUID[OrganisationRegistryProperties.GetCurrentMunicipality()], ItemChoiceType.UUIDIdentifikator);
             soegInput.RelationListe.TilknyttedeOrganisationer = new OrganisationFlerRelationType[1];
@@ -880,8 +882,8 @@ namespace Organisation.IntegrationLayer
                     soegInput.RelationListe.TilknyttedeBrugere[0].Virkning = new VirkningType();
                     soegInput.RelationListe.TilknyttedeBrugere[0].Virkning.FraTidspunkt = new TidspunktType();
                     soegInput.RelationListe.TilknyttedeBrugere[0].Virkning.FraTidspunkt.Item = DateTime.Now;
-                    soegInput.RelationListe.TilknyttedeBrugere[0].Virkning.FraTidspunkt = new TidspunktType();
-                    soegInput.RelationListe.TilknyttedeBrugere[0].Virkning.FraTidspunkt.Item = true;
+                    soegInput.RelationListe.TilknyttedeBrugere[0].Virkning.TilTidspunkt = new TidspunktType();
+                    soegInput.RelationListe.TilknyttedeBrugere[0].Virkning.TilTidspunkt.Item = true;
                 }
             }
 
@@ -947,6 +949,38 @@ namespace Organisation.IntegrationLayer
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
                 throw StubUtil.CheckForTemporaryError(ex, "Soeg", "OrganisationFunktion");
+            }
+        }
+
+        public void Passiver(string uuid)
+        {
+            log.Debug("Attempting Passiver on OrganisationFunktion with uuid " + uuid);
+
+            UuidNoteInputType input = new UuidNoteInputType();
+            input.UUIDIdentifikator = uuid;
+
+            passiverRequest request = new passiverRequest();
+            request.PassiverInput = input;
+
+            // send request
+            OrganisationFunktionPortType channel = StubUtil.CreateChannel<OrganisationFunktionPortType>(OrganisationFunktionStubHelper.SERVICE, "Passiver");
+
+            try
+            {
+                var result = channel.passiverAsync(request).Result;
+                int statusCode = Int32.Parse(result.PassiverOutput.StandardRetur.StatusKode);
+                if (statusCode != 20)
+                {
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Passiver", OrganisationFunktionStubHelper.SERVICE, result.PassiverOutput.StandardRetur.FejlbeskedTekst);
+                    log.Error(message);
+                    throw new SoapServiceException(message);
+                }
+
+                log.Debug("Passiver successful on OrganisationFunktion with uuid " + uuid);
+            }
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
+            {
+                throw StubUtil.CheckForTemporaryError(ex, "Passiver", "OrganisationFunktion");
             }
         }
 
@@ -1022,6 +1056,12 @@ namespace Organisation.IntegrationLayer
                 int statusCode = Int32.Parse(response.RetOutput.StandardRetur.StatusKode);
                 if (statusCode != 20)
                 {
+                    // if 40 - we don't care, just passiver
+                    if (statusCode == 40)
+                    {
+                        Passiver(uuid);
+                        return;
+                    }
                     string message = StubUtil.ConstructSoapErrorMessage(statusCode, "Ret", OrganisationFunktionStubHelper.SERVICE, response.RetOutput.StandardRetur.FejlbeskedTekst);
                     log.Error(message);
                     throw new SoapServiceException(message);

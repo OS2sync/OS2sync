@@ -88,6 +88,19 @@ namespace Organisation.BusinessLayer
             }
         }
 
+        public void Passiver(string uuid)
+        {
+            try
+            {
+                organisationEnhedStub.Passiver(uuid);
+            }
+            catch (Exception ex) when (ex is STSNotFoundException || ex is ServiceNotFoundException)
+            {
+                log.Warn("Passiver on OrgUnitService failed for '" + uuid + "' due to unavailable KOMBIT services", ex);
+                throw new TemporaryFailureException(ex.Message);
+            }
+        }
+
         /// <summary>
         /// This method will perform a soft-delete on the given OrgUnit. As objects are never really deleted within Organisation,
         /// it means that the object will be orphaned in the sense that all direct and indirect relationships to and from the municipalities
@@ -1130,7 +1143,7 @@ namespace Organisation.BusinessLayer
 
         private bool DisableUdbetalingsenheder()
         {
-            if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableUdbetalingsenheder.Count > 0)
+            if (!string.IsNullOrEmpty(OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableUdbetalingsenheder))
             {
                 if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableUdbetalingsenheder.Contains("true") ||
                     OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableUdbetalingsenheder.Contains(OrganisationRegistryProperties.GetCurrentMunicipality()))
@@ -1144,7 +1157,7 @@ namespace Organisation.BusinessLayer
 
         private bool DisableHenvendelsessteder()
         {
-            if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableHenvendelsessteder.Count > 0)
+            if (!string.IsNullOrEmpty(OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableHenvendelsessteder))
             {
                 if (OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableHenvendelsessteder.Contains("true") ||
                     OrganisationRegistryProperties.AppSettings.SchedulerSettings.DisableHenvendelsessteder.Contains(OrganisationRegistryProperties.GetCurrentMunicipality()))

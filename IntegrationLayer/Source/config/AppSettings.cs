@@ -22,5 +22,8 @@ namespace Organisation.IntegrationLayer
 
         // flip to TRUE, and updates on OUs will start by wiping all existing addresses, and then creating new ones
         public bool RecreateOrgunitAddresses { get; set; } = false;
+
+        // flip to TRUE, and updates on Brugers will start by wiping all existing addresses, and then creating new ones
+        public bool RecreateBrugerAddresses { get; set; } = false;
     }
 }

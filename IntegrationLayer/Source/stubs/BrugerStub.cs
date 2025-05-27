@@ -228,6 +228,31 @@ namespace Organisation.IntegrationLayer
                 return;
             }
 
+            // identify if duplicate address references are present, and perform passiver/import in that case
+            if (OrganisationRegistryProperties.AppSettings.PassiverAndReImportOnErrors)
+            {
+                var addresses = registration?.RelationListe?.Adresser;
+                if (addresses != null)
+                {
+                    List<string> addressReferenceUuids = new List<string>();
+
+                    foreach (var address in addresses)
+                    {
+                        string uuidReference = address.ReferenceID.Item;
+                        if (addressReferenceUuids.Contains(uuidReference))
+                        {
+                            log.Info("Detected address duplicates on " + user.Uuid + " performing Passiver and Import");
+                            Passiver(user.Uuid);
+                            Importer(user);
+
+                            return;
+                        }
+
+                        addressReferenceUuids.Add(uuidReference);
+                    }
+                }
+            }
+
             VirkningType virkning = helper.GetVirkning(user.Timestamp);
 
             BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "Ret");
@@ -682,6 +707,67 @@ namespace Organisation.IntegrationLayer
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
             {
                 throw StubUtil.CheckForTemporaryError(ex, "Laes", "Bruger");
+            }
+        }
+
+        public void WipeAddresses(string uuid, DateTime timestamp)
+        {
+            log.Debug("Attempting WipeAllAddresses on Bruger with uuid " + uuid);
+
+            RegistreringType1 registration = GetLatestRegistration(uuid);
+            if (registration == null)
+            {
+                log.Debug("Cannot call WipeAllAddresses on OrganisationEnhed with uuid " + uuid + " because it does not exist in Organisation");
+                return;
+            }
+
+            BrugerPortType channel = StubUtil.CreateChannel<BrugerPortType>(BrugerStubHelper.SERVICE, "WipeAllAddresses");
+
+            try
+            {
+                bool changes = false;
+
+                RetInputType1 input = new RetInputType1();
+                input.UUIDIdentifikator = uuid;
+                input.AttributListe = registration.AttributListe;
+                input.TilstandListe = registration.TilstandListe;
+                input.RelationListe = registration.RelationListe;
+
+                // terminate the Virkning on all address relationships
+                changes = StubUtil.TerminateObjectsInOrgNoLongerPresentLocally(input.RelationListe.Adresser, new object[0], timestamp, true) || changes;
+
+                // if no changes are made, we do not call the service
+                if (!changes)
+                {
+                    log.Debug("WipeAllAddresses on Bruger with uuid " + uuid + " cancelled because of no changes");
+                    return;
+                }
+
+                // send Ret request
+                retRequest request = new retRequest();
+                request.RetInput = input;
+
+                retResponse response = channel.retAsync(request).Result;
+
+                int statusCode = Int32.Parse(response.RetOutput.StandardRetur.StatusKode);
+                if (statusCode != 20)
+                {
+                    if (statusCode == 49)
+                    {
+                        log.Warn("WipeAllAddresses failed on OrgUnit " + uuid + " as Bruger returned status 49. The most likely cause is that the object has been Passiveret");
+                        return;
+                    }
+
+                    string message = StubUtil.ConstructSoapErrorMessage(statusCode, "WipeAllAddresses", OrganisationEnhedStubHelper.SERVICE, response.RetOutput.StandardRetur.FejlbeskedTekst);
+                    log.Error(message);
+                    throw new SoapServiceException(message);
+                }
+
+                log.Debug("WipeAllAddresses succesful on Bruger with uuid " + uuid);
+            }
+            catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
+            {
+                throw StubUtil.CheckForTemporaryError(ex, "WipeAllAddresses", "Bruger");
             }
         }
 

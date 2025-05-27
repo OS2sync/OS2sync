@@ -58,6 +58,16 @@ namespace Organisation.BusinessLayer
                 }
                 else
                 {
+                    // wipe all existing addresses if needed
+                    if (OrganisationRegistryProperties.AppSettings.RecreateBrugerAddresses)
+                    {
+                        // terminate all Address relationships
+                        brugerStub.WipeAddresses(user.Uuid, user.Timestamp);
+
+                        // reload to re-add addresses :)
+                        result = brugerStub.GetLatestRegistration(user.Uuid);
+                    }
+
                     var addressRefs = UpdateAddresses(user, result);
 
                     ServiceHelper.UpdatePosition(user);
@@ -81,6 +91,19 @@ namespace Organisation.BusinessLayer
             catch (Exception ex) when (ex is STSNotFoundException || ex is ServiceNotFoundException)
             {
                 log.Warn("Update on UserService failed for '" + user.Uuid + "' due to unavailable KOMBIT services", ex);
+                throw new TemporaryFailureException(ex.Message);
+            }
+        }
+
+        public void Passiver(string uuid)
+        {
+            try
+            {
+                brugerStub.Passiver(uuid);
+            }
+            catch (Exception ex) when (ex is STSNotFoundException || ex is ServiceNotFoundException)
+            {
+                log.Warn("Passiver on UserService failed for '" + uuid + "' due to unavailable KOMBIT services", ex);
                 throw new TemporaryFailureException(ex.Message);
             }
         }

@@ -6,5 +6,6 @@ namespace Organisation.IntegrationLayer
         public string LogLevel { get; set; } = "INFO";
         public string LogFile { get; set; }
         public bool LogRequestResponse { get; set; } = false;
+        public bool LogOioidws { get; set; } = false;
     }
 }

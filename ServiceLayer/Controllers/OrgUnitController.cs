@@ -87,6 +87,35 @@ namespace Organisation.ServiceLayer
             return Ok();
         }
 
+        [HttpPost("passiver/{uuid}")]
+        public IActionResult Passiver(string uuid, [FromHeader] string cvr, [FromHeader] string apiKey)
+        {
+            if ((cvr = AuthorizeAndFetchCvr(cvr, apiKey)) == null)
+            {
+                log.Warn("Rejected access to OrgUnit Passiver operation");
+
+                return Unauthorized();
+            }
+
+            try
+            {
+                OrgUnitRegistrationExtended toRemove = new OrgUnitRegistrationExtended()
+                {
+                    Uuid = uuid
+                };
+
+                orgUnitDao.Save(toRemove, OperationType.PASSIVER, false, 10, cvr);
+            }
+            catch (Exception ex)
+            {
+                log.Error("Failed to save OrgUnit", ex);
+
+                return BadRequest(ex.Message);
+            }
+
+            return Ok();
+        }
+
         [HttpPost("cleanup")]
         public IActionResult Cleanup([FromBody] string[] existingOrgUnits, [FromHeader] string cvr, [FromHeader] string apiKey, [FromQuery] bool dryrun = false)
         {

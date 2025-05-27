@@ -98,6 +98,12 @@ namespace Organisation.IntegrationLayer
                     AppSettings.ServiceSettings.WspEndpointID = "http://stoettesystemerne.dk/service/organisation/3";
                     break;
                 case "PROD":
+                    AppSettings.StsSettings.StsEndpointAddress = "https://n2adgangsstyring.stoettesystemerne.dk/runtime/services/kombittrust/14/certificatemixed";
+                    AppSettings.StsSettings.StsEntityIdentifier = "https://saml.n2adgangsstyring.stoettesystemerne.dk/runtime";
+                    AppSettings.ServiceSettings.WspEndpointBaseUrl = "https://organisation.stoettesystemerne.dk/organisation/";
+                    AppSettings.ServiceSettings.WspEndpointID = "http://stoettesystemerne.dk/service/organisation/3";
+                    break;
+                case "PROD-OLD":
                     AppSettings.StsSettings.StsEndpointAddress = "https://adgangsstyring.stoettesystemerne.dk/runtime/services/kombittrust/14/certificatemixed";
                     AppSettings.StsSettings.StsEntityIdentifier = "https://saml.adgangsstyring.stoettesystemerne.dk/runtime";
                     AppSettings.ServiceSettings.WspEndpointBaseUrl = "https://organisation.stoettesystemerne.dk/organisation/";

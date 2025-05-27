@@ -102,7 +102,7 @@ namespace Organisation.IntegrationLayer
             };
 
             StsTokenServiceConfiguration stsConfiguration = TokenServiceConfigurationFactory.CreateConfiguration(wscConfiguration);
-            stsConfiguration.SendTimeout = new TimeSpan(0, 5, 0);
+            stsConfiguration.SendTimeout = new TimeSpan(0, 3, 0);
 
             if (OrganisationRegistryProperties.AppSettings.TrustAllCertificates)
             {
@@ -123,7 +123,22 @@ namespace Organisation.IntegrationLayer
                 throw new Exception("Token from STS does not contain CVR of municipality: " + OrganisationRegistryProperties.GetCurrentMunicipality());
             }
 
-            return CreateChannelWithIssuedToken<PortType>(securityToken, stsConfiguration, service, operation);
+            /*
+            // only wait 1 minute for response, except for function and system, where we will wait 2-3 minutes
+            TimeSpan timespan = new TimeSpan(0, 1, 0);
+            if ("organisationsystem/6".Equals(service))
+            {
+                timespan = new TimeSpan(0, 3, 0);
+            }
+            else if ("organisationfunktion/6".Equals(service))
+            {
+                timespan = new TimeSpan(0, 2, 0);
+            }
+            */
+            // KMD fix for now
+            TimeSpan timespan = new TimeSpan(0, 3, 0);
+
+            return CreateChannelWithIssuedToken<PortType>(securityToken, stsConfiguration, service, operation, timespan);
         }
 
         public static Exception CheckForTemporaryError(Exception ex, string operation, string service)
@@ -161,7 +176,7 @@ namespace Organisation.IntegrationLayer
         /// <param name="token">A security token which is issued by an STS</param>
         /// <param name="stsConfiguration">Configuration of the STS and the WSP</param>
         /// <returns>A channel to call service T</returns>
-        public static T CreateChannelWithIssuedToken<T>(GenericXmlSecurityToken token, StsTokenServiceConfiguration stsConfiguration, string service, string operation)
+        public static T CreateChannelWithIssuedToken<T>(GenericXmlSecurityToken token, StsTokenServiceConfiguration stsConfiguration, string service, string operation, TimeSpan timespan)
         {
             if (token == null)
                 throw new ArgumentNullException(nameof(token));
@@ -185,10 +200,10 @@ namespace Organisation.IntegrationLayer
             };
 
             var bindingToCallService = new OioIdwsSoapBinding(tokenParameters);
-            bindingToCallService.SendTimeout = new TimeSpan(0, 3, 0);
-            bindingToCallService.OpenTimeout = new TimeSpan(0, 3, 0);
-            bindingToCallService.CloseTimeout = new TimeSpan(0, 3, 0);
-            bindingToCallService.ReceiveTimeout = new TimeSpan(0, 3, 0);
+            bindingToCallService.SendTimeout = timespan;
+            bindingToCallService.OpenTimeout = timespan;
+            bindingToCallService.CloseTimeout = timespan;
+            bindingToCallService.ReceiveTimeout = timespan;
 
             FederatedChannelFactory<T> factory = CreateFactory<T>(stsConfiguration, serverCertificate, bindingToCallService);
 
