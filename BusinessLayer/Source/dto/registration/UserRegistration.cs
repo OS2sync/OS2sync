@@ -20,6 +20,7 @@ namespace Organisation.BusinessLayer.DTO.Registration
         public string Location { get; set; }
         public string FMKID { get; set; }
         public Status Status { get; set; }
+        public bool IsRobot { get; set; }
 
 
         public List<Position> Positions { get; set; } = new List<Position>();

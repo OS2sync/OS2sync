@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Xml;
 using IntegrationLayer.Bruger;
 
 namespace Organisation.IntegrationLayer
@@ -224,6 +226,59 @@ namespace Organisation.IntegrationLayer
             }
         }
 
+        internal void AddRobotRelationship(VirkningType virkning, RegistreringType1 registration, bool isRobot)
+        {
+            if (!isRobot)
+            {
+                return;
+            }
+            
+            if (registration.RelationListe == null)
+            {
+                registration.RelationListe = new RelationListeType();
+            }
+
+            if (registration.RelationListe.BrugerTyper == null)
+            {
+                // Start with an empty array to init the correct size when we need it
+                registration.RelationListe.BrugerTyper = new KlasseFlerRelationType[0];
+            }
+
+            // Check if Robot relation already exists
+            bool robotRelationExists = false;
+            string robotUUID = "fb24bae4-beb1-4970-9a94-cf7ce215f63c";
+
+            foreach (var relation in registration.RelationListe.BrugerTyper)
+            {
+                if (string.Equals(relation.ReferenceID.Item, robotUUID))
+                {
+                    robotRelationExists = true;
+                    break;
+                }
+            }
+
+            // Add new relation if it doesn't exist
+            if (!robotRelationExists)
+            {
+                // We create an array with one more element than before
+                KlasseFlerRelationType[] newArray = new KlasseFlerRelationType[registration.RelationListe.BrugerTyper.Length + 1];
+
+                // Copy the existing BrugerTyper
+                Array.Copy(registration.RelationListe.BrugerTyper, newArray, registration.RelationListe.BrugerTyper.Length);
+
+                KlasseFlerRelationType robotRelation = new KlasseFlerRelationType();
+                UnikIdType reference = new UnikIdType();
+                reference.ItemElementName = ItemChoiceType.UUIDIdentifikator;
+                reference.Item = robotUUID;
+                robotRelation.ReferenceID = reference;
+                robotRelation.Virkning = virkning;
+
+                newArray[newArray.Length - 1] = robotRelation;
+
+                registration.RelationListe.BrugerTyper = newArray;
+            }
+        }
+
         internal void AddPersonRelationship(string personUuid, VirkningType virkning, RegistreringType1 registration)
         {
             UnikIdType personReference = new UnikIdType();
@@ -256,6 +311,32 @@ namespace Organisation.IntegrationLayer
                 {
                     return person;
                 }
+            }
+
+            return null;
+        }
+
+        internal static KlasseFlerRelationType[] GetRobotClassFlerRelationType(KlasseFlerRelationType[] classes)
+        {
+            if (classes == null || classes.Length == 0)
+            {
+                return null;
+            }
+
+            // We make a new list that only contains the Robot userType if it exists
+            KlasseFlerRelationType[] newClasses = new KlasseFlerRelationType[1];
+
+            foreach (var classType in classes.Select((value, i) => (value, i)))
+            {
+                if (classType.value.ReferenceID.Item.Equals("fb24bae4-beb1-4970-9a94-cf7ce215f63c"))
+                {
+                    newClasses[classType.i] = classType.value;
+                }
+            }
+
+            if (newClasses.Length > 0)
+            {
+                return newClasses;
             }
 
             return null;

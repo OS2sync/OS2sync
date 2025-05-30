@@ -23,7 +23,7 @@ namespace Organisation.BusinessLayer
             {
                 var addressRefs = ImportAddresses(user);
 
-                // create person object
+                // create new person object
                 string personUuid = null;
                 ServiceHelper.UpdatePerson(user, null, out personUuid);
 
@@ -155,13 +155,15 @@ namespace Organisation.BusinessLayer
                 registration.Uuid = uuid;
                 registration.UserId = user.UserId;
                 registration.ShortKey = user.ShortKey;
+                registration.IsRobot = user.IsRobot;
 
                 if (user.Person != null)
                 {
                     registration.Person = new Person()
                     {
                         Cpr = user.Person.Cpr,
-                        Name = user.Person.Name
+                        Name = user.Person.Name,
+                        Uuid = user.Person.Uuid
                     };
                 }
 
@@ -420,6 +422,7 @@ namespace Organisation.BusinessLayer
             user.UserId = registration.UserId;
             user.Uuid = registration.Uuid;
             user.PersonUuid = personUuid;
+            user.IsRobot = registration.IsRobot;
 
             return user;
         }

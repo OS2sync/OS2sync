@@ -11,5 +11,6 @@ namespace Organisation.IntegrationLayer
         public DateTime Timestamp { get; set; }
         public string Uuid { get; set; }
         public string PersonUuid { get; set; }
+        public bool IsRobot { get; set; }
     }
 }

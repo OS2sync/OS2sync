@@ -144,7 +144,9 @@ namespace Organisation.SchedulingLayer
                 bypass_cache,
                 cvr,
                 operation,
-                priority
+                priority,
+                person_uuid,
+                is_robot
             )";
 
         private const string INSERT_SUFFIX = @"
@@ -163,7 +165,9 @@ namespace Organisation.SchedulingLayer
                 @bypass_cache,
                 @cvr,
                 @operation,
-                @priority
+                @priority,
+                @person_uuid,
+                @is_robot
             );
         ";
 
@@ -212,11 +216,11 @@ namespace Organisation.SchedulingLayer
         private const string DELETE = @"DELETE FROM queue_users WHERE id = @id";
 
         private const string INSERT_ON_SUCCESS = @"
-            INSERT INTO success_users (id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, skipped) SELECT id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, @skipped FROM queue_users WHERE id = @id;
+            INSERT INTO success_users (id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, skipped, person_uuid, is_robot) SELECT id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, @skipped, person_uuid, is_robot FROM queue_users WHERE id = @id;
             INSERT INTO success_user_positions (id, user_id, name, orgunit_uuid, start_date, stop_date) SELECT id, user_id, name, orgunit_uuid, start_date, stop_date FROM queue_user_positions WHERE user_id = @id;";
 
         private const string INSERT_ON_FAILURE = @"
-            INSERT INTO failure_users (id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, error) SELECT id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, @error FROM queue_users q WHERE id = @id;
+            INSERT INTO failure_users (id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, error, person_uuid, is_robot) SELECT id, timestamp, uuid, shortkey, user_id, phone_number, email, location, name, cpr, cvr, operation, racfid, landline, fmk_id, @error, person_uuid, is_robot FROM queue_users q WHERE id = @id;
             INSERT INTO failure_user_positions (id, user_id, name, orgunit_uuid, start_date, stop_date) SELECT id, user_id, name, orgunit_uuid, start_date, stop_date FROM queue_user_positions WHERE user_id = @id;";
 
         private const string CLEANUP_MYSQL = @"

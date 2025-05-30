@@ -29,13 +29,15 @@ namespace Organisation.SchedulingLayer
                 string.Equals(this.Email, other.Email) &&
                 string.Equals(this.RacfID, other.RacfID) &&
                 string.Equals(this.Location, other.Location) &&
-                string.Equals(this.FMKID, other.FMKID))
+                string.Equals(this.FMKID, other.FMKID) &&
+                bool.Equals(this.IsRobot, other.IsRobot))
             {
                 fieldsEquals = true;
             }
 
             if (string.Equals(this.Person?.Cpr, other.Person?.Cpr) &&
-                string.Equals(this.Person?.Name, other.Person?.Name))
+                string.Equals(this.Person?.Name, other.Person?.Name) &&
+                string.Equals(this.Person?.Uuid, other.Person?.Uuid))
             {
                 personEquals = true;
             }

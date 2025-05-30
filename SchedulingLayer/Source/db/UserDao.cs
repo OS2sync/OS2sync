@@ -40,6 +40,8 @@ namespace Organisation.SchedulingLayer
                             command.Parameters.Add(DaoUtil.GetParameter("@cvr", cvr));
                             command.Parameters.Add(DaoUtil.GetParameter("@priority", priority));
                             command.Parameters.Add(DaoUtil.GetParameter("@operation", operation.ToString()));
+                            command.Parameters.Add(DaoUtil.GetParameter("@person_uuid", user.Person.Uuid ?? (object)DBNull.Value));
+                            command.Parameters.Add(DaoUtil.GetParameter("@is_robot", user.IsRobot));
 
                             user_id = Convert.ToInt64(command.ExecuteScalar());
                         }
@@ -101,9 +103,11 @@ namespace Organisation.SchedulingLayer
                             user.Cvr = GetValue(reader, "cvr");
                             user.Uuid = GetValue(reader, "uuid");
                             user.ShortKey = GetValue(reader, "shortkey");
+                            user.IsRobot = GetBooleanValue(reader, "is_robot");
 
                             user.Person.Name = GetValue(reader, "name");
                             user.Person.Cpr = GetValue(reader, "cpr");
+                            user.Person.Uuid = GetValue(reader, "person_uuid");
                             user.Timestamp = (DateTime)reader["timestamp"];
                             user.BypassCache = GetBooleanValue(reader, "bypass_cache");
                             user.Operation = (OperationType)Enum.Parse(typeof(OperationType), GetValue(reader, "operation"));
@@ -171,9 +175,11 @@ namespace Organisation.SchedulingLayer
                             user.Cvr = GetValue(reader, "cvr");
                             user.Uuid = GetValue(reader, "uuid");
                             user.ShortKey = GetValue(reader, "shortkey");
+                            user.IsRobot = GetBooleanValue(reader, "is_robot");
 
                             user.Person.Name = GetValue(reader, "name");
                             user.Person.Cpr = GetValue(reader, "cpr");
+                            user.Person.Uuid = GetValue(reader, "person_uuid");
                             user.Timestamp = (DateTime)reader["timestamp"];
                             user.Operation = (OperationType)Enum.Parse(typeof(OperationType), GetValue(reader, "operation"));
 

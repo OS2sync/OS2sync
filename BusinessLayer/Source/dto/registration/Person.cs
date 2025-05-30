@@ -7,5 +7,6 @@ namespace Organisation.BusinessLayer.DTO.Registration
     {
         public string Name { get; set; }
         public string Cpr { get; set; }
+        public string Uuid { get; set; }
     }
 }

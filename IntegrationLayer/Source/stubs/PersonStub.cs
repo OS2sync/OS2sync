@@ -50,7 +50,6 @@ namespace Organisation.IntegrationLayer
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
-
                 log.Debug("Import successful on Person with uuid " + person.Uuid);
             }
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)
@@ -132,7 +131,7 @@ namespace Organisation.IntegrationLayer
                     log.Error(message);
                     throw new SoapServiceException(message);
                 }
-
+                
                 log.Debug("Ret successful on Person with uuid " + uuid);
             }
             catch (Exception ex) when (ex is CommunicationException || ex is IOException || ex is TimeoutException || ex is WebException || ex is AggregateException)

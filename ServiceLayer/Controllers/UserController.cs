@@ -4,7 +4,6 @@ using System;
 using Microsoft.AspNetCore.Mvc;
 using Organisation.BusinessLayer.DTO.Registration;
 using System.Collections.Generic;
-using Organisation.BusinessLayer.DTO.Read;
 using System.Linq;
 
 namespace Organisation.ServiceLayer

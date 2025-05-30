@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.ServiceModel;
 using System.ServiceModel.Description;
@@ -30,6 +31,7 @@ namespace Organisation.IntegrationLayer
             helper.AddProperties(user.ShortKey, user.UserId, virkning, registration);
 
             // setup relations
+            helper.AddRobotRelationship(virkning, registration, user.IsRobot);
             helper.AddAddressReferences(user.Addresses, virkning, registration);
             helper.AddPersonRelationship(user.PersonUuid, virkning, registration);
             helper.AddOrganisationRelation(StubUtil.GetMunicipalityOrganisationUUID(), virkning, registration);
@@ -433,6 +435,25 @@ namespace Organisation.IntegrationLayer
 
                     log.Warn("Ret on Bruge with uuid " + user.Uuid + " encountered a registration with NO relationship to a Person - fixing it!");
                     helper.AddPersonRelationship(user.PersonUuid, virkning, registration);
+                    changes = true;
+                }
+                #endregion
+
+                #region Update robot relationship
+                KlasseFlerRelationType[] existingRobot = BrugerStubHelper.GetRobotClassFlerRelationType(registration.RelationListe.BrugerTyper);
+
+                // Case 1: We have IsRobot true, but no existing Robot relation -> We add one to the user
+                if (existingRobot == null && user.IsRobot)
+                {
+                    helper.AddRobotRelationship(virkning, registration, user.IsRobot);
+                    changes = true;
+                }
+
+                // Case 2: We have IsRobot false, but an existing Robot relation, i.e., user was changed from being Robot to something else (rare case, but we support it) -> we terminate the virkning
+                else if (existingRobot != null && !user.IsRobot)
+                {
+                    // Due to GetRobotClassFlerRelationType the existingRobot will always have max one element, hence index 0
+                    StubUtil.TerminateVirkning(existingRobot[0].Virkning, user.Timestamp);
                     changes = true;
                 }
                 #endregion

@@ -389,34 +389,70 @@ namespace Organisation.BusinessLayer
 
         internal static void UpdatePerson(UserRegistration user, string orgPersonUuid, out string uuid)
         {
-            uuid = orgPersonUuid; // default
+            if (!string.IsNullOrEmpty(user.Person?.Uuid))
+            {
+                uuid = user.Person?.Uuid;
+            }
+            else
+            {
+                uuid = null;
+            }
 
             if (orgPersonUuid != null)
             {
-                // This is the expected case for an update operation - see if we have updates for the referenced Person object
+                if (uuid == null || string.Equals(orgPersonUuid, uuid))
+                {
+                    // This is the case where we update a user and have not provided a new uuid on the Person object,
+                    // i.e., we don't want to create a new person object
+                    uuid = orgPersonUuid;
 
-                personStub.Ret(orgPersonUuid, user.Person.Name, user.Person.Cpr, user.Timestamp);
+                    personStub.Ret(orgPersonUuid, user.Person.Name, user.Person.Cpr, user.Timestamp);
+                }
+                else
+                {
+                    // This is the case where we update a user and have provided a new uuid on the Person object,
+                    // i.e., we want to blank the old Person object and create a new one
+                    // We give it name RemovedObject because we cannot give null or empty (not allowed)
+                    personStub.Ret(orgPersonUuid, "RemovedObject", null, user.Timestamp);
+
+                    UpdatePerson(user, null, out uuid);
+                }
             }
             else
             {
                 // This is either because no Person object existed for the User (first time creation), or because
                 // the local supplied uuid of the Person object differs from the one stored in Organisation. In both
-                // cases we need to create the Person object from scratch
+                // cases we need to create the Person object from scratch and the user needs to map to it
 
-                PersonData personData = new PersonData()
+                if (uuid != null)
                 {
-                    Cpr = user.Person.Cpr,
-                    Name = user.Person.Name,
-                    ShortKey = IdUtil.GenerateShortKey(),
-                    Timestamp = user.Timestamp,
-                    Uuid = IdUtil.GenerateUuid()
-                };
+                    // Case 1: A new person_uuid has been provided, so we make use of it
 
-                personStub.Importer(personData);
+                    CreatePersonData(user, uuid);
+                }
+                else
+                {
+                    // Case 2: A new person_uuid has not been provided, so we generate a random one
 
-                // ensure that we have the uuid of the person in the user object, as we will need it for later
-                uuid = personData.Uuid;
+                    uuid = IdUtil.GenerateUuid();
+                    CreatePersonData(user, uuid);
+                }
             }
+        }
+
+        // Helper function to remove code duplication
+        internal static void CreatePersonData(UserRegistration user, string uuid)
+        {
+            PersonData personData = new PersonData()
+            {
+                Cpr = user.Person.Cpr,
+                Name = user.Person.Name,
+                ShortKey = IdUtil.GenerateShortKey(),
+                Timestamp = user.Timestamp,
+                Uuid = uuid
+            };
+
+            personStub.Importer(personData);
         }
 
         internal static void UpdateAddress(string address, string orgUuid, DateTime timestamp, out string uuid)

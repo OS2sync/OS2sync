@@ -18,6 +18,7 @@ namespace Organisation.BusinessLayer.DTO.Read
         public DateTime Timestamp { get; set; }
         public List<Position> Positions { get; set; }
         public List<AddressHolder> Addresses { get; set; }
+        public bool IsRobot { get; set; }
 
         public List<string> Errors { get; set; } = new List<string>();
     }
