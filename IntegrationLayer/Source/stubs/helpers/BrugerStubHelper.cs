@@ -288,7 +288,7 @@ namespace Organisation.IntegrationLayer
             PersonFlerRelationType person = new PersonFlerRelationType();
             person.Virkning = virkning;
             person.ReferenceID = personReference;
-
+           
             registration.RelationListe.TilknyttedePersoner = new PersonFlerRelationType[1];
             registration.RelationListe.TilknyttedePersoner[0] = person;
         }
@@ -324,19 +324,17 @@ namespace Organisation.IntegrationLayer
             }
 
             // We make a new list that only contains the Robot userType if it exists
-            KlasseFlerRelationType[] newClasses = new KlasseFlerRelationType[1];
+            List<KlasseFlerRelationType> newClasses = new List<KlasseFlerRelationType>();
 
-            foreach (var classType in classes.Select((value, i) => (value, i)))
-            {
-                if (classType.value.ReferenceID.Item.Equals("fb24bae4-beb1-4970-9a94-cf7ce215f63c"))
-                {
-                    newClasses[classType.i] = classType.value;
+            foreach (var clazz in classes) {
+                if (clazz.ReferenceID.Item.Equals("fb24bae4-beb1-4970-9a94-cf7ce215f63c")) {
+                    newClasses.Add(clazz);
                 }
             }
 
-            if (newClasses.Length > 0)
+            if (newClasses.Count() > 0)
             {
-                return newClasses;
+                return newClasses.ToArray();
             }
 
             return null;
